@@ -1,9 +1,8 @@
-// Mobile Fresh Build Version 2.0
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as Sharing from 'expo-sharing'; 
-import { DatabaseBackup, Download, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
-import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
+import { MD3Colors, MD3Spacing, MD3Radius } from '@/lib/theme';
 import { exportBackup, importBackup, downloadBackupFile } from '@/lib/db/database';
 import { ScreenHeader } from '@/components/ui';
 
@@ -60,7 +59,7 @@ export default function BackupScreen() {
   }, []);
 
   const triggerFilePicker = () => {
-    Alert.alert('Restore', 'File Import feature configuration updated.');
+    Alert.alert('Restore', 'File Import feature configured.');
   };
 
   return (
@@ -94,7 +93,7 @@ export default function BackupScreen() {
             {busy === 'export' ? (
               <ActivityIndicator color={MD3Colors.primary} />
             ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={styles.shareBtnContent}>
                 <Share2 size={16} color={MD3Colors.primary} />
                 <Text style={styles.secondaryBtnText}>Export & Share Backup</Text>
               </View>
@@ -130,7 +129,7 @@ export default function BackupScreen() {
             onPress={triggerFilePicker} 
             disabled={busy !== null}
           >
-            {busy === 'import' ? <ActivityIndicator color={MD3Colors.onPrimary} /> : <Text style={styles.warningBtnText}>Select File</Text>}
+            <Text style={styles.warningBtnText}>Select File</Text>
           </TouchableOpacity>
         </View>
 
@@ -163,7 +162,7 @@ export default function BackupScreen() {
 
         {status && (
           <View style={[styles.statusBox, status.includes('failed') ? styles.statusError : styles.statusSuccess]}>
-            {status.includes('failed') ? <AlertCircle size={18} color={MD3Colors.error} /> : <DatabaseBackup size={18} color={MD3Colors.success} />}
+            <AlertCircle size={18} color={status.includes('failed') ? MD3Colors.error : MD3Colors.success} />
             <Text style={styles.statusText}>{status}</Text>
           </View>
         )}
@@ -175,21 +174,23 @@ export default function BackupScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
   infoBanner: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: MD3Colors.onPrimaryContainer, borderRadius: MD3Radius.md, padding: MD3Spacing.md, margin: MD3Spacing.md },
-  infoText: { flex: 1, fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onPrimaryContainer, marginLeft: MD3Spacing.sm },
+  infoText: { flex: 1, fontSize: 13, color: MD3Colors.onPrimaryContainer, marginLeft: MD3Spacing.sm },
   card: { backgroundColor: '#fff', padding: MD3Spacing.md, borderRadius: MD3Radius.lg, paddingBottom: MD3Spacing.lg, marginBottom: MD3Spacing.md },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
   cardIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
-  primaryBtnText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurfaceVariant, marginBottom: 2 },
-  cardDesc: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.outline, lineHeight: 18 },
+  primaryBtnText: { fontSize: 16, color: MD3Colors.onSurfaceVariant, marginBottom: 2, fontWeight: 'bold' },
+  cardDesc: { fontSize: 12, color: MD3Colors.outline, lineHeight: 18 },
   secondaryBtn: { backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  secondaryBtnText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.primary },
-  warningBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  warningBtnText: { backgroundColor: MD3Colors.secondary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  timestamp: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.sm, textAlign: 'center' },
+  secondaryBtnText: { fontSize: 14, color: '#fff' },
+  shareBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  warningBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center', backgroundColor: MD3Colors.secondary },
+  warningBtnText: { fontSize: 14, color: '#fff' },
+  timestamp: { fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.sm, textAlign: 'center' },
   structRow: { flexDirection: 'row', alignItems: 'center', marginTop: MD3Spacing.xs },
-  structText: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginLeft: MD3Spacing.sm },
+  structText: { fontSize: 13, color: MD3Colors.onSurfaceVariant, marginLeft: MD3Spacing.sm },
   statusBox: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginHorizontal: MD3Spacing.md, marginBottom: MD3Spacing.md },
   statusError: { backgroundColor: MD3Colors.errorContainer },
   statusSuccess: { backgroundColor: MD3Colors.successContainer },
-  statusText: { flex: 1, fontFamily: 'Roboto-Medium', fontSize: 13 },
+  statusText: { flex: 1, fontSize: 13 },
 });
+              
