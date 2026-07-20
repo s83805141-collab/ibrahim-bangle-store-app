@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
-import { DatabaseBackup, Download, Upload, FileJson, ShieldCheck, AlertCircle, Info } from 'lucide-react-native';
+// Sharing मॉड्यूल को इम्पोर्ट किया
+import * as Sharing from 'expo-sharing'; 
+import { DatabaseBackup, Download, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { exportBackup, importBackup, downloadBackupFile } from '@/lib/db/database';
 import { ScreenHeader } from '@/components/ui';
@@ -11,16 +13,33 @@ export default function BackupScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const fileInputRef = useRef<any>(null);
 
-  const handleExport = useCallback(async () => {
+  // मोबाइल में सेव करने और ईमेल पर शेयर करने का कंबाइंड फ़ंक्शन
+  const handleExportAndShare = useCallback(async () => {
     setBusy('export');
     setStatus(null);
     try {
-      await downloadBackupFile();
+      // 1. यह आपके मोबाइल के लोकल स्टोरेज (Downloads) में सेव करेगा
+      const fileUri = await downloadBackupFile(); 
+      
       const ts = new Date().toLocaleString('en-US');
       setLastBackup(ts);
-      setStatus('Backup exported successfully.');
+      setStatus('Backup saved to device.');
+
+      // 2. यह मोबाइल का शेयर मेनू खोलेगा जिससे आप ईमेल (Gmail) पर भेज सकें
+      if (Platform.OS !== 'web') {
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable && fileUri) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Send Backup to your Email',
+          });
+        }
+      } else {
+        Alert.alert('Success', 'Backup file downloaded successfully.');
+      }
     } catch (e: any) {
       setStatus('Export failed: ' + (e.message || 'unknown error'));
+      Alert.alert('Error', e.message || 'Could not export backup');
     } finally {
       setBusy(null);
     }
@@ -87,16 +106,24 @@ export default function BackupScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.primaryBtnText}>Backup Data</Text>
-              <Text style={styles.cardDesc}>Export all your local records into a JSON file format.</Text>
+              <Text style={styles.cardDesc}>Save to mobile storage and share to your Email/WhatsApp.</Text>
             </View>
           </View>
           
+          {/* बटन का नाम बदलकर 'Export & Share' कर दिया है */}
           <TouchableOpacity 
             style={styles.secondaryBtn} 
-            onPress={handleExport}
+            onPress={handleExportAndShare}
             disabled={busy !== null}
           >
-            {busy === 'export' ? <ActivityIndicator color={MD3Colors.primary} /> : <Text style={styles.secondaryBtnText}>Export File</Text>}
+            {busy === 'export' ? (
+              <ActivityIndicator color={MD3Colors.primary} />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Share2 size={16} color={MD3Colors.primary} />
+                <Text style={styles.secondaryBtnText}>Export & Share Backup</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -197,12 +224,4 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.primary },
   warningBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
   warningBtnText: { backgroundColor: MD3Colors.secondary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  timestamp: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.se, textAlign: 'center' },
-  structRow: { flexDirection: 'row', alignItems: 'center', marginTop: MD3Spacing.xs },
-  structText: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginLeft: MD3Spacing.sm },
-  statusBox: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginHorizontal: MD3Spacing.md, marginBottom: MD3Spacing.md },
-  statusError: { backgroundColor: MD3Colors.errorContainer },
-  statusSuccess: { backgroundColor: MD3Colors.successContainer },
-  statusText: { flex: 1, fontFamily: 'Roboto-Medium', fontSize: 13 },
-});
-          
+  
