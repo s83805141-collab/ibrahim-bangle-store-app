@@ -20,6 +20,8 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Local Build Android APK
-        run: npx expo export && npx eas-cli build --platform android --profile preview --local --non-interactive
-        
+      - name: Build APK Locally
+        run: |
+          npx expo export
+          npx eas-cli build --platform android --profile preview --local --non-interactive
+          
