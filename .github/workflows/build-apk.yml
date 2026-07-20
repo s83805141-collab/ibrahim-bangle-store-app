@@ -24,19 +24,20 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Prebuild Android Folder
-        run: npx expo prebuild --platform android
+      # यहाँ हमने पुराना कैश साफ़ करने की कमांड जोड़ दी है
+      - name: Clean and Prebuild Android Folder
+        run: |
+          npx expo prebuild --clean --platform android
 
-      # इसे बदलकर Release बिल्ड कर दिया गया है
-      - name: Build Release APK with Gradle
+      - name: Build Debug APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug-apk.apk
           
