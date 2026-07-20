@@ -20,19 +20,29 @@ export async function getDb(): Promise<DatabaseAdapter> {
   if (!adapterPromise) {
     adapterPromise = createAdapter().then(async (db) => {
       if (!isInitialized) {
-        await db.exec(SCHEMA_SQL);
-        await runMigration(db);
-        const res = await db.exec('SELECT * FROM categories');
-        if (res.rows.length === 0) {
-          const now = Date.now();
-          for (const name of SEED_CATEGORIES) {
-            await db.exec(
-              'INSERT INTO categories (name, description, created_at) VALUES (?, ?, ?)',
-              [name, '', now]
-            );
+        try {
+          // Execute initial schema
+          await db.exec(SCHEMA_SQL);
+          
+          // Run migrations
+          await runMigration(db);
+          
+          // Seed default categories if none exist
+          const res = await db.exec('SELECT * FROM categories');
+          if (res.rows.length === 0) {
+            const now = Date.now();
+            for (const name of SEED_CATEGORIES) {
+              await db.exec(
+                'INSERT INTO categories (name, description, created_at) VALUES (?, ?, ?)',
+                [name, '', now]
+              );
+            }
           }
+          isInitialized = true;
+        } catch (error) {
+          console.error('Database initialization error:', error);
+          throw error;
         }
-        isInitialized = true;
       }
       return db;
     });
@@ -57,7 +67,11 @@ export async function resetDatabase(): Promise<void> {
       'suppliers', 'customers', 'categories', 'settings',
     ];
     for (const t of allTables) {
-      await db.exec(`DROP TABLE IF EXISTS ${t}`);
+      try {
+        await db.exec(`DROP TABLE IF EXISTS ${t}`);
+      } catch (error) {
+        console.error(`Error dropping table ${t}:`, error);
+      }
     }
     adapterPromise = null;
     isInitialized = false;
@@ -69,22 +83,33 @@ export async function resetDatabase(): Promise<void> {
 // for ADD COLUMN, so we check the current columns via PRAGMA table_info.
 async function runMigration(db: DatabaseAdapter): Promise<void> {
   for (const migration of [MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3]) {
-    const statements = migration.split(';').map(s => s.trim()).filter(Boolean);
+    if (!migration || migration.trim().length === 0) continue;
+    
+    const statements = migration
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    
     for (const stmt of statements) {
       const upper = stmt.toUpperCase();
-      if (upper.startsWith('ALTER TABLE') && upper.includes('ADD COLUMN')) {
-        const m = stmt.match(/ALTER TABLE (\w+) ADD COLUMN (\w+)/i);
-        if (m) {
-          const table = m[1];
-          const column = m[2];
-          const info = await db.exec(`PRAGMA table_info(${table})`);
-          const exists = info.rows._array.some((c: any) => c.name === column);
-          if (!exists) {
-            await db.exec(stmt);
+      try {
+        if (upper.startsWith('ALTER TABLE') && upper.includes('ADD COLUMN')) {
+          const m = stmt.match(/ALTER TABLE\s+(\w+)\s+ADD COLUMN\s+(\w+)/i);
+          if (m) {
+            const table = m[1];
+            const column = m[2];
+            const info = await db.exec(`PRAGMA table_info(${table})`);
+            const exists = info.rows._array.some((c: any) => c.name === column);
+            if (!exists) {
+              await db.exec(stmt);
+            }
           }
+        } else if (upper.startsWith('CREATE TABLE') || upper.startsWith('CREATE INDEX')) {
+          await db.exec(stmt);
         }
-      } else if (upper.startsWith('CREATE TABLE') || upper.startsWith('CREATE INDEX')) {
-        await db.exec(stmt);
+      } catch (error) {
+        console.error(`Migration error for statement: ${stmt}`, error);
+        // Continue with next statement
       }
     }
   }
@@ -123,8 +148,13 @@ export async function exportBackup(): Promise<string> {
     ];
     const dump: Record<string, any[]> = {};
     for (const t of tables) {
-      const res = await db.exec(`SELECT * FROM ${t}`);
-      dump[t] = res.rows._array;
+      try {
+        const res = await db.exec(`SELECT * FROM ${t}`);
+        dump[t] = res.rows._array;
+      } catch (error) {
+        console.error(`Error exporting table ${t}:`, error);
+        dump[t] = [];
+      }
     }
     raw = JSON.stringify(dump);
   }
@@ -151,14 +181,18 @@ export async function importBackup(jsonStr: string): Promise<void> {
     const data = JSON.parse(parsed.data) as Record<string, any[]>;
     const tables = Object.keys(data);
     for (const t of tables) {
-      await db.exec(`DELETE FROM ${t}`);
-      for (const row of data[t]) {
-        const cols = Object.keys(row);
-        const placeholders = cols.map(() => '?').join(', ');
-        await db.exec(
-          `INSERT INTO ${t} (${cols.join(', ')}) VALUES (${placeholders})`,
-          cols.map(c => row[c])
-        );
+      try {
+        await db.exec(`DELETE FROM ${t}`);
+        for (const row of data[t]) {
+          const cols = Object.keys(row);
+          const placeholders = cols.map(() => '?').join(', ');
+          await db.exec(
+            `INSERT INTO ${t} (${cols.join(', ')}) VALUES (${placeholders})`,
+            cols.map(c => row[c])
+          );
+        }
+      } catch (error) {
+        console.error(`Error importing table ${t}:`, error);
       }
     }
   }
