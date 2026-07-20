@@ -28,16 +28,16 @@ jobs:
         run: |
           npx expo prebuild --clean --platform android
 
-      - name: Build Debug APK with Gradle
+      # इसे बिल्कुल सही रिलीज़ मोड पर सेट कर दिया गया है
+      - name: Build Unsigned Release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          # रास्ता बदल दिया गया है ताकि सभी .apk फाइलें आ जाएं
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           
