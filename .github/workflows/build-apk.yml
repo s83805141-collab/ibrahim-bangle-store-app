@@ -24,7 +24,6 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # यहाँ हमने पुराना कैश साफ़ करने की कमांड जोड़ दी है
       - name: Clean and Prebuild Android Folder
         run: |
           npx expo prebuild --clean --platform android
@@ -39,5 +38,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug-apk.apk
+          # रास्ता बदल दिया गया है ताकि सभी .apk फाइलें आ जाएं
+          path: android/app/build/outputs/apk/debug/*.apk
           
