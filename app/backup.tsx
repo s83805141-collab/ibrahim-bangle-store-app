@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
+// Mobile Fresh Build Version 2.0
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
-// Sharing मॉड्यूल को इम्पोर्ट किया
 import * as Sharing from 'expo-sharing'; 
 import { DatabaseBackup, Download, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
@@ -11,21 +11,17 @@ export default function BackupScreen() {
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const fileInputRef = useRef<any>(null);
 
-  // मोबाइल में सेव करने और ईमेल पर शेयर करने का कंबाइंड फ़ंक्शन
   const handleExportAndShare = useCallback(async () => {
     setBusy('export');
     setStatus(null);
     try {
-      // 1. यह आपके मोबाइल के लोकल स्टोरेज (Downloads) में सेव करेगा
       const fileUri = await downloadBackupFile(); 
       
       const ts = new Date().toLocaleString('en-US');
       setLastBackup(ts);
       setStatus('Backup saved to device.');
 
-      // 2. यह मोबाइल का शेयर मेनू खोलेगा जिससे आप ईमेल (Gmail) पर भेज सकें
       if (Platform.OS !== 'web') {
         const isAvailable = await Sharing.isAvailableAsync();
         if (isAvailable && fileUri) {
@@ -40,22 +36,6 @@ export default function BackupScreen() {
     } catch (e: any) {
       setStatus('Export failed: ' + (e.message || 'unknown error'));
       Alert.alert('Error', e.message || 'Could not export backup');
-    } finally {
-      setBusy(null);
-    }
-  }, []);
-
-  const handleImportFile = useCallback(async (file: File) => {
-    setBusy('import');
-    setStatus(null);
-    try {
-      const text = await file.text();
-      await importBackup(text);
-      setStatus('Backup restored successfully. Reloading data...');
-      Alert.alert('Restore Complete', 'Your data has been restored. The app will refresh.');
-    } catch (e: any) {
-      setStatus('Import Failed: ' + (e.message || 'invalid file'));
-      Alert.alert('Import Failed', e.message || 'The selected file is not a valid backup.');
     } finally {
       setBusy(null);
     }
@@ -80,11 +60,7 @@ export default function BackupScreen() {
   }, []);
 
   const triggerFilePicker = () => {
-    if (Platform.OS === 'web' && fileInputRef.current) {
-      fileInputRef.current.click();
-    } else {
-      Alert.alert('Restore', 'File Import is available on web. On native, use the document picker.');
-    }
+    Alert.alert('Restore', 'File Import feature configuration updated.');
   };
 
   return (
@@ -110,7 +86,6 @@ export default function BackupScreen() {
             </View>
           </View>
           
-          {/* बटन का नाम बदलकर 'Export & Share' कर दिया है */}
           <TouchableOpacity 
             style={styles.secondaryBtn} 
             onPress={handleExportAndShare}
@@ -157,20 +132,6 @@ export default function BackupScreen() {
           >
             {busy === 'import' ? <ActivityIndicator color={MD3Colors.onPrimary} /> : <Text style={styles.warningBtnText}>Select File</Text>}
           </TouchableOpacity>
-
-          {Platform.OS === 'web' && (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: 'none' }}
-              onChange={(e: any) => {
-                const file = e.target.files?.[0];
-                if (file) handleImportFile(file);
-                e.target.value = '';
-              }}
-            />
-          )}
         </View>
 
         <View style={styles.card}>
@@ -224,4 +185,11 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.primary },
   warningBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
   warningBtnText: { backgroundColor: MD3Colors.secondary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  
+  timestamp: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.sm, textAlign: 'center' },
+  structRow: { flexDirection: 'row', alignItems: 'center', marginTop: MD3Spacing.xs },
+  structText: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginLeft: MD3Spacing.sm },
+  statusBox: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginHorizontal: MD3Spacing.md, marginBottom: MD3Spacing.md },
+  statusError: { backgroundColor: MD3Colors.errorContainer },
+  statusSuccess: { backgroundColor: MD3Colors.successContainer },
+  statusText: { flex: 1, fontFamily: 'Roboto-Medium', fontSize: 13 },
+});
