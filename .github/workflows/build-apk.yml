@@ -14,14 +14,27 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Install Dependencies
         run: npm install
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Prebuild Android Folder
+        run: npx expo prebuild --platform android
 
-      - name: Build APK Locally
+      - name: Build Debug APK with Gradle
         run: |
-          npx expo export
-          npx eas-cli build --platform android --profile preview --local --non-interactive
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           
