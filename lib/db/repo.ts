@@ -52,13 +52,13 @@ export interface ProductWithDetails extends Product {
 export async function getAllCategories(): Promise<Category[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM categories ORDER BY name');
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function getAllSuppliers(): Promise<{ id: number; name: string }[]> {
   const db = await getDb();
   const res = await db.exec('SELECT id, name FROM suppliers ORDER BY name');
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function getAllProducts(): Promise<ProductWithDetails[]> {
@@ -70,15 +70,15 @@ export async function getAllProducts(): Promise<ProductWithDetails[]> {
     LEFT JOIN suppliers s ON p.supplier_id = s.id
     ORDER BY p.created_at DESC
   `);
-  const products = res.rows._array;
+  const products = res.rows._array || [];
   for (const p of products) {
     const vRes = await db.exec(
       'SELECT * FROM product_variants WHERE product_id = ?',
       [p.id]
     );
-    p.variants = vRes.rows._array;
-    p.total_stock = vRes.rows._array.reduce((s: number, v: any) => s + (v.quantity || 0), 0);
-    p.variant_count = vRes.rows._array.length;
+    p.variants = vRes.rows._array || [];
+    p.total_stock = (vRes.rows._array || []).reduce((s: number, v: any) => s + (v.quantity || 0), 0);
+    p.variant_count = (vRes.rows._array || []).length;
   }
   return products;
 }
@@ -95,8 +95,8 @@ export async function getProductById(id: number): Promise<ProductWithDetails | n
   if (res.rows.length === 0) return null;
   const product = res.rows._array[0];
   const vRes = await db.exec('SELECT * FROM product_variants WHERE product_id = ?', [id]);
-  product.variants = vRes.rows._array;
-  product.total_stock = vRes.rows._array.reduce((s: number, v: any) => s + (v.quantity || 0), 0);
+  product.variants = vRes.rows._array || [];
+  product.total_stock = (vRes.rows._array || []).reduce((s: number, v: any) => s + (v.quantity || 0), 0);
   return product;
 }
 
@@ -107,7 +107,7 @@ export async function getProductStock(productId: number, variantId: number | nul
     return res.rows.length > 0 ? (res.rows._array[0].quantity || 0) : 0;
   }
   const res = await db.exec('SELECT * FROM product_variants WHERE product_id = ?', [productId]);
-  return res.rows._array.reduce((s: number, v: any) => s + (v.quantity || 0), 0);
+  return (res.rows._array || []).reduce((s: number, v: any) => s + (v.quantity || 0), 0);
 }
 
 export async function addProduct(product: Product, variants: Omit<ProductVariant, 'product_id'>[]): Promise<number> {
@@ -128,7 +128,7 @@ export async function addProduct(product: Product, variants: Omit<ProductVariant
   for (const v of variants) {
     await db.exec(
       'INSERT INTO product_variants (product_id, size, color, quantity) VALUES (?, ?, ?, ?)',
-      [productId, v.size, v.color, v.quantity]
+      [productId, v.size || '', v.color || '', v.quantity || 0]
     );
   }
   return productId;
@@ -150,7 +150,7 @@ export async function updateProduct(id: number, product: Product, variants: Omit
   for (const v of variants) {
     await db.exec(
       'INSERT INTO product_variants (product_id, size, color, quantity) VALUES (?, ?, ?, ?)',
-      [id, v.size, v.color, v.quantity]
+      [id, v.size || '', v.color || '', v.quantity || 0]
     );
   }
 }
@@ -208,8 +208,8 @@ export async function getDashboardStats(): Promise<{
     db.exec('SELECT * FROM supplier_ledger ORDER BY date DESC LIMIT 50'),
     db.exec('SELECT * FROM customer_ledger ORDER BY date DESC LIMIT 50'),
   ]);
-  const productList = products.rows._array;
-  const variantList = variants.rows._array;
+  const productList = products.rows._array || [];
+  const variantList = variants.rows._array || [];
   const totalStock = variantList.reduce((s: number, v: any) => s + (v.quantity || 0), 0);
   const totalProductsValue = productList.reduce((s: number, p: any) => {
     const stock = variantList.filter((v: any) => v.product_id === p.id).reduce((sv: number, v: any) => sv + (v.quantity || 0), 0);
@@ -223,33 +223,33 @@ export async function getDashboardStats(): Promise<{
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const todayTs = startOfToday.getTime();
-  const todayPurchase = purchases.rows._array
+  const todayPurchase = (purchases.rows._array || [])
     .filter((p: any) => p.date >= todayTs)
     .reduce((s: number, p: any) => s + (p.grand_total || p.subtotal || 0), 0);
-  const todaySales = sales.rows._array
+  const todaySales = (sales.rows._array || [])
     .filter((s: any) => s.date >= todayTs)
     .reduce((s: number, h: any) => s + (h.grand_total || h.subtotal || 0), 0);
 
-  const pendingSupplierBalance = suppliers.rows._array.reduce((s: number, sup: any) => {
-    const entries = supplierLedger.rows._array.filter((e: any) => e.supplier_id === sup.id);
+  const pendingSupplierBalance = (suppliers.rows._array || []).reduce((s: number, sup: any) => {
+    const entries = (supplierLedger.rows._array || []).filter((e: any) => e.supplier_id === sup.id);
     const purchase = entries.filter((e: any) => e.type === 'purchase' || e.type === 'opening').reduce((a: number, e: any) => a + (e.amount || 0), 0);
     const paid = entries.filter((e: any) => e.type === 'payment').reduce((a: number, e: any) => a + (e.amount || 0), 0);
     return s + Math.max(0, purchase - paid);
   }, 0);
 
-  const pendingCustomerBalance = customers.rows._array.reduce((s: number, c: any) => {
-    const entries = customerLedger.rows._array.filter((e: any) => e.customer_id === c.id);
+  const pendingCustomerBalance = (customers.rows._array || []).reduce((s: number, c: any) => {
+    const entries = (customerLedger.rows._array || []).filter((e: any) => e.customer_id === c.id);
     const purchase = entries.filter((e: any) => e.type === 'sale' || e.type === 'opening').reduce((a: number, e: any) => a + (e.amount || 0), 0);
     const paid = entries.filter((e: any) => e.type === 'payment').reduce((a: number, e: any) => a + (e.amount || 0), 0);
     return s + Math.max(0, purchase - paid);
   }, 0);
 
   const recentMap = new Map<number, any>();
-  for (const p of purchases.rows._array) {
+  for (const p of (purchases.rows._array || [])) {
     recentMap.set(p.id, { id: p.id, type: 'purchase' as const, label: `Purchase ${p.invoice_number || `#${p.id}`}`, amount: p.grand_total || p.subtotal || 0, date: p.date, party: p.supplier_id });
   }
-  for (const s of sales.rows._array) {
-    recentMap.set(s.id + 1000000, { id: s.id, type: 'sale' as const, label: `Sale ${s.invoice_number || `#${s.id}`}`, amount: s.grand_total || s.subtotal || 0, date: s.date, party: s.customer_name || 'Walk-in' });
+  for (const s of (sales.rows._array || [])) {
+    recentMap.set(s.id + 1000000, { id: s.id, type: 'sale' as const, label: `Sale ${s.invoice_number || `#${s.id}`}`, amount: s.grand_total || s.subtotal || 0, date: s.date, party: s.customer_name });
   }
   const recentTransactions = Array.from(recentMap.values())
     .sort((a, b) => b.date - a.date)
@@ -306,15 +306,19 @@ export async function getAllSuppliersFull(): Promise<SupplierWithStats[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM suppliers ORDER BY name');
   const suppliers: SupplierWithStats[] = [];
-  for (const s of res.rows._array) {
+  for (const s of (res.rows._array || [])) {
     const stats = await getSupplierLedgerTotals(s.id);
     suppliers.push({
       ...s,
       whatsapp: s.whatsapp || '',
+      email: s.email || '',
       city: s.city || '',
       state: s.state || '',
+      gst_number: s.gst_number || '',
       opening_balance: s.opening_balance || 0,
       notes: s.notes || '',
+      status: s.status || 'Active',
+      photo: s.photo || '',
       total_purchase: stats.totalPurchase,
       total_paid: stats.totalPaid,
       remaining_balance: stats.remainingBalance,
@@ -332,10 +336,14 @@ export async function getSupplierById(id: number): Promise<SupplierWithStats | n
   return {
     ...s,
     whatsapp: s.whatsapp || '',
+    email: s.email || '',
     city: s.city || '',
     state: s.state || '',
+    gst_number: s.gst_number || '',
     opening_balance: s.opening_balance || 0,
     notes: s.notes || '',
+    status: s.status || 'Active',
+    photo: s.photo || '',
     total_purchase: stats.totalPurchase,
     total_paid: stats.totalPaid,
     remaining_balance: stats.remainingBalance,
@@ -490,7 +498,7 @@ export async function addPurchase(
   const remaining = Math.max(0, grandTotal - totalPaid);
   const res = await db.exec(
     'INSERT INTO purchase_headers (supplier_id, invoice_number, date, subtotal, discount, transport_charges, other_charges, grand_total, amount_paid, remaining_balance, payment_method, transaction_number, note, payment_date, payment_time, upi_id, reference_number, payment_screenshot, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [header.supplier_id, header.invoice_number || '', header.date, header.subtotal, header.discount || 0, header.transport_charges || 0, header.other_charges || 0, grandTotal, totalPaid, remaining, header.payment_method, header.transaction_number || '', header.note || '', header.payment_date || header.date, header.payment_time || '', header.upi_id || '', header.reference_number || '', header.payment_screenshot || '', now]
+    [header.supplier_id, header.invoice_number || '', header.date, header.subtotal, header.discount || 0, header.transport_charges || 0, header.other_charges || 0, grandTotal, totalPaid, remaining, header.payment_method, header.transaction_number || '', header.note || '', header.payment_date || 0, header.payment_time || '', header.upi_id || '', header.reference_number || '', header.payment_screenshot || '', now]
   );
   const headerId = res.insertId!;
 
@@ -529,7 +537,7 @@ export async function addPurchase(
     }
     await db.exec(
       'INSERT INTO supplier_ledger (supplier_id, type, amount, date, note, payment_method, transaction_number, ref_type, ref_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [header.supplier_id, 'payment', payment.amount, payment.payment_date, `Payment for ${header.invoice_number || ''}`.trim(), payment.payment_mode, payment.transaction_number || '', 'payment', headerId]
+      [header.supplier_id, 'payment', payment.amount, payment.payment_date, `Payment for ${header.invoice_number || ''}`.trim(), payment.payment_mode, payment.transaction_number || '', 'payment', paymentId]
     );
   }
 
@@ -545,7 +553,7 @@ export async function getAllPurchases(): Promise<PurchaseHeaderWithDetails[]> {
     ORDER BY ph.date DESC
   `);
   const purchases: PurchaseHeaderWithDetails[] = [];
-  for (const h of res.rows._array) {
+  for (const h of (res.rows._array || [])) {
     const items = await getPurchaseItems(h.id);
     const payments = await getPaymentsByPurchase(h.id);
     purchases.push({ ...h, items, payments });
@@ -557,13 +565,13 @@ export async function getPurchaseItems(headerId: number): Promise<PurchaseItemDe
   const db = await getDb();
   const res = await db.exec(`
     SELECT pi.*, p.name AS product_name,
-      (pv.size || ' ' || pv.color) AS variant_label
+      (COALESCE(pv.size, '') || ' ' || COALESCE(pv.color, '')) AS variant_label
     FROM purchase_items pi
     LEFT JOIN products p ON pi.product_id = p.id
     LEFT JOIN product_variants pv ON pi.variant_id = pv.id
     WHERE pi.purchase_header_id = ?
   `, [headerId]);
-  return res.rows._array.map((item: any) => ({
+  return (res.rows._array || []).map((item: any) => ({
     ...item,
     variant_label: item.variant_label ? item.variant_label.trim() : undefined,
   }));
@@ -622,7 +630,7 @@ export async function getSupplierLedgerEntries(supplierId: number): Promise<Ledg
     'SELECT * FROM supplier_ledger WHERE supplier_id = ? ORDER BY date DESC',
     [supplierId]
   );
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export interface LedgerEntryWithBalance extends LedgerEntry {
@@ -638,7 +646,7 @@ export async function getSupplierLedgerWithRunningBalance(supplierId: number, fr
   sql += ' ORDER BY date ASC, id ASC';
   const res = await db.exec(sql, params);
   let running = 0;
-  return (res.rows._array as any[]).map((e: any) => {
+  return (res.rows._array as any[] || []).map((e: any) => {
     if (e.type === 'purchase' || e.type === 'opening') running += e.amount || 0;
     else if (e.type === 'payment') running -= e.amount || 0;
     return { ...e, running_balance: running } as LedgerEntryWithBalance;
@@ -648,7 +656,7 @@ export async function getSupplierLedgerWithRunningBalance(supplierId: number, fr
 export async function getSupplierLedgerTotals(supplierId: number): Promise<SupplierLedgerSummary> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM supplier_ledger WHERE supplier_id = ?', [supplierId]);
-  const entries = res.rows._array;
+  const entries = res.rows._array || [];
   const totalPurchase = entries
     .filter((e: any) => e.type === 'purchase' || e.type === 'opening')
     .reduce((s: number, e: any) => s + (e.amount || 0), 0);
@@ -690,7 +698,7 @@ export async function getPurchasesBySupplier(supplierId: number): Promise<Purcha
     ORDER BY ph.date DESC
   `, [supplierId]);
   const purchases: PurchaseHeaderWithDetails[] = [];
-  for (const h of res.rows._array) {
+  for (const h of (res.rows._array || [])) {
     const items = await getPurchaseItems(h.id);
     const payments = await getPaymentsByPurchase(h.id);
     purchases.push({ ...h, items, payments });
@@ -720,7 +728,7 @@ export async function getSettings(): Promise<ShopSettings> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM settings');
   const map: Record<string, string> = {};
-  for (const r of res.rows._array) {
+  for (const r of (res.rows._array || [])) {
     map[r.key] = r.value;
   }
   return {
@@ -741,7 +749,7 @@ export async function saveSettings(settings: ShopSettings): Promise<void> {
   ];
   for (const [key, value] of entries) {
     await db.exec(
-      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
       [key, value]
     );
   }
@@ -777,7 +785,7 @@ export async function getAllCustomersFull(): Promise<CustomerWithStats[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM customers ORDER BY name');
   const customers: CustomerWithStats[] = [];
-  for (const c of res.rows._array) {
+  for (const c of (res.rows._array || [])) {
     const stats = await getCustomerLedgerTotals(c.id);
     customers.push({
       ...c,
@@ -956,7 +964,7 @@ export async function addSale(
       throw new Error(`Insufficient stock for a product (available: ${available}, requested: ${item.quantity}). Negative stock is not allowed.`);
     }
     await db.exec(
-      'INSERT INTO sale_items (sale_header_id, product_id, variant_id, product_name, quantity, unit, unit_price, total) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO sale_items (sale_header_id, product_id, variant_id, product_name, quantity, unit, unit_price, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [headerId, item.product_id, item.variant_id ?? null, item.product_name, item.quantity, item.unit, item.unit_price, item.total]
     );
     if (item.variant_id) {
@@ -999,7 +1007,7 @@ export async function getAllSales(): Promise<SaleHeaderWithDetails[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM sale_headers ORDER BY date DESC');
   const sales: SaleHeaderWithDetails[] = [];
-  for (const h of res.rows._array) {
+  for (const h of (res.rows._array || [])) {
     const items = await getSaleItems(h.id);
     sales.push({ ...h, is_walkin: !!h.is_walkin, items });
   }
@@ -1023,12 +1031,12 @@ export async function getSaleById(id: number): Promise<SaleHeaderWithDetails | n
 export async function getSaleItems(headerId: number): Promise<SaleItemDetail[]> {
   const db = await getDb();
   const res = await db.exec(`
-    SELECT si.*, (pv.size || ' ' || pv.color) AS variant_label
+    SELECT si.*, (COALESCE(pv.size, '') || ' ' || COALESCE(pv.color, '')) AS variant_label
     FROM sale_items si
     LEFT JOIN product_variants pv ON si.variant_id = pv.id
     WHERE si.sale_header_id = ?
   `, [headerId]);
-  return res.rows._array.map((item: any) => ({
+  return (res.rows._array || []).map((item: any) => ({
     ...item,
     variant_label: item.variant_label ? item.variant_label.trim() : undefined,
   }));
@@ -1057,7 +1065,7 @@ export async function getSalesByCustomer(customerId: number): Promise<SaleHeader
   const db = await getDb();
   const res = await db.exec('SELECT * FROM sale_headers WHERE customer_id = ? ORDER BY date DESC', [customerId]);
   const sales: SaleHeaderWithDetails[] = [];
-  for (const h of res.rows._array) {
+  for (const h of (res.rows._array || [])) {
     const items = await getSaleItems(h.id);
     sales.push({ ...h, is_walkin: !!h.is_walkin, items });
   }
@@ -1090,13 +1098,13 @@ export interface CustomerLedgerSummary {
 export async function getCustomerLedgerEntries(customerId: number): Promise<CustomerLedgerEntry[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM customer_ledger WHERE customer_id = ? ORDER BY date DESC', [customerId]);
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function getCustomerLedgerTotals(customerId: number): Promise<CustomerLedgerSummary> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM customer_ledger WHERE customer_id = ?', [customerId]);
-  const entries = res.rows._array;
+  const entries = res.rows._array || [];
   const totalPurchase = entries
     .filter((e: any) => e.type === 'sale' || e.type === 'opening')
     .reduce((s: number, e: any) => s + (e.amount || 0), 0);
@@ -1207,9 +1215,9 @@ export async function getCustomerPayments(customerId: number): Promise<CustomerP
   const db = await getDb();
   const res = await db.exec('SELECT * FROM customer_payments WHERE customer_id = ? ORDER BY payment_date DESC', [customerId]);
   const payments: CustomerPaymentWithImages[] = [];
-  for (const p of res.rows._array) {
+  for (const p of (res.rows._array || [])) {
     const imgRes = await db.exec('SELECT * FROM customer_payment_images WHERE customer_payment_id = ?', [p.id]);
-    payments.push({ ...p, images: imgRes.rows._array });
+    payments.push({ ...p, images: imgRes.rows._array || [] });
   }
   return payments;
 }
@@ -1233,7 +1241,7 @@ export async function getCustomerLedgerWithRunningBalance(customerId: number): P
   const db = await getDb();
   const res = await db.exec('SELECT * FROM customer_ledger WHERE customer_id = ? ORDER BY date ASC, id ASC', [customerId]);
   let running = 0;
-  return res.rows._array.map((e: any) => {
+  return (res.rows._array || []).map((e: any) => {
     if (e.type === 'sale' || e.type === 'opening') {
       running += e.amount || 0;
     } else if (e.type === 'payment') {
@@ -1289,7 +1297,7 @@ export async function getAllStockMovements(): Promise<StockMovement[]> {
     LEFT JOIN products p ON sm.product_id = p.id
     ORDER BY sm.date DESC
   `);
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function getStockMovementsByProduct(productId: number): Promise<StockMovement[]> {
@@ -1301,7 +1309,7 @@ export async function getStockMovementsByProduct(productId: number): Promise<Sto
     WHERE sm.product_id = ?
     ORDER BY sm.date DESC
   `, [productId]);
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function adjustStock(
@@ -1385,7 +1393,7 @@ export interface BankAccount {
 export async function getAllBankAccounts(): Promise<BankAccount[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM bank_accounts ORDER BY name');
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function getBankAccountById(id: number): Promise<BankAccount | null> {
@@ -1424,7 +1432,7 @@ export async function getPaymentsByPurchase(purchaseHeaderId: number): Promise<S
   const db = await getDb();
   const res = await db.exec('SELECT * FROM supplier_payments WHERE purchase_header_id = ? ORDER BY payment_date DESC', [purchaseHeaderId]);
   const payments: SupplierPayment[] = [];
-  for (const p of res.rows._array) {
+  for (const p of (res.rows._array || [])) {
     const imgs = await getPaymentProofImages(p.id);
     payments.push({ ...p, proof_images: imgs });
   }
@@ -1435,7 +1443,7 @@ export async function getPaymentsBySupplier(supplierId: number): Promise<Supplie
   const db = await getDb();
   const res = await db.exec('SELECT * FROM supplier_payments WHERE supplier_id = ? ORDER BY payment_date DESC', [supplierId]);
   const payments: SupplierPayment[] = [];
-  for (const p of res.rows._array) {
+  for (const p of (res.rows._array || [])) {
     const imgs = await getPaymentProofImages(p.id);
     payments.push({ ...p, proof_images: imgs });
   }
@@ -1446,7 +1454,7 @@ export async function getAllSupplierPayments(): Promise<SupplierPayment[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM supplier_payments ORDER BY payment_date DESC');
   const payments: SupplierPayment[] = [];
-  for (const p of res.rows._array) {
+  for (const p of (res.rows._array || [])) {
     const imgs = await getPaymentProofImages(p.id);
     payments.push({ ...p, proof_images: imgs });
   }
@@ -1489,7 +1497,7 @@ export async function deleteSupplierPayment(paymentId: number): Promise<void> {
 export async function getPaymentProofImages(paymentId: number): Promise<PaymentProofImage[]> {
   const db = await getDb();
   const res = await db.exec('SELECT * FROM payment_proof_images WHERE supplier_payment_id = ?', [paymentId]);
-  return res.rows._array;
+  return res.rows._array || [];
 }
 
 export async function addPaymentProofImage(paymentId: number, imagePath: string, caption = ''): Promise<number> {
@@ -1545,7 +1553,7 @@ export async function getFilteredSupplierLedgerEntries(filter: LedgerFilter): Pr
   query += ' ORDER BY sl.date ASC';
   const res = await db.exec(query, params);
   let running = 0;
-  return res.rows._array.map((e: any) => {
+  return (res.rows._array || []).map((e: any) => {
     if (e.type === 'purchase' || e.type === 'opening') running += e.amount;
     else if (e.type === 'payment') running -= e.amount;
     return { ...e, running_balance: running };
