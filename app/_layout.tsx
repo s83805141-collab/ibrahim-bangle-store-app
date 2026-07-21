@@ -13,7 +13,7 @@ import {
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { MD3Colors } from '@/lib/theme';
 
-SplashScreen.preventAutoHideAsync();
+// SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -27,7 +27,7 @@ export default function RootLayout() {
   useEffect(() => {
     async function hideSplash() {
       if (fontsLoaded || fontError) {
-        await SplashScreen.hideAsync();
+        // await SplashScreen.hideAsync();
       }
     }
 
