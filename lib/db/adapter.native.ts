@@ -52,7 +52,7 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
     .filter(Boolean);
 
   for (const stmt of statements) {
-    await run(stmt);
+    await run(stmt, []);
   }
 
   return {
