@@ -11,7 +11,29 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
     const cmd = sql.trim().toUpperCase();
 
     // CREATE TABLE / MULTI-STATEMENT
-    if (cmd.startsWith("CREATE")) {
+    if (
+  cmd.startsWith("CREATE") ||
+  cmd.startsWith("DROP") ||
+  cmd.startsWith("BEGIN") ||
+  cmd.startsWith("COMMIT")
+) {
+  const statements = sql
+    .split(";")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  for (const stmt of statements) {
+    await db.execAsync(stmt);
+  }
+
+  return {
+    rowsAffected: 0,
+    rows: {
+      _array: [],
+      length: 0,
+    },
+  };
+    }
       const statements = sql
         .split(";")
         .map(s => s.trim())
