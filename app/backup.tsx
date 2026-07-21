@@ -2,9 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as Sharing from 'expo-sharing'; 
 import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
-import { MD3Colors, MD3Spacing, MD3Radius } from '@/lib/theme';
-import { exportBackup, importBackup, downloadBackupFile } from '@/lib/db/database';
-import { ScreenHeader } from '@/components/ui';
+import { exportBackup, importBackup, downloadBackupFile } from '../lib/db/database';
+import { ScreenHeader } from '../components/ui';
 
 export default function BackupScreen() {
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
@@ -66,9 +65,9 @@ export default function BackupScreen() {
     <View style={styles.container}>
       <ScreenHeader title="Backup & Restore" subtitle="Export & import your offline data" />
       
-      <ScrollView style={{ flex: 1 }}>
+      <ScrollView style={styles.scroll}>
         <View style={styles.infoBanner}>
-          <Info size={20} color={MD3Colors.onPrimaryContainer} />
+          <Info size={20} color="#004a77" />
           <Text style={styles.infoText}>
             Your data is stored locally on this device. Back up regularly to secure your information.
           </Text>
@@ -76,10 +75,10 @@ export default function BackupScreen() {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: MD3Colors.primaryContainer }]}>
-              <DatabaseBackup size={22} color={MD3Colors.primary} />
+            <View style={[styles.cardIcon, { backgroundColor: '#dfebd5' }]}>
+              <DatabaseBackup size={22} color="#386a20" />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.headerTextContainer}>
               <Text style={styles.primaryBtnText}>Backup Data</Text>
               <Text style={styles.cardDesc}>Save to mobile storage and share to your Email/WhatsApp.</Text>
             </View>
@@ -91,17 +90,17 @@ export default function BackupScreen() {
             disabled={busy !== null}
           >
             {busy === 'export' ? (
-              <ActivityIndicator color={MD3Colors.primary} />
+              <ActivityIndicator color="#386a20" />
             ) : (
               <View style={styles.shareBtnContent}>
-                <Share2 size={16} color={MD3Colors.primary} />
+                <Share2 size={16} color="#ffffff" />
                 <Text style={styles.secondaryBtnText}>Export & Share Backup</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.secondaryBtn, { marginTop: MD3Spacing.sm }]} 
+            style={[styles.secondaryBtn, { marginTop: 12 }]} 
             onPress={handleCopyToClipboard}
             disabled={busy !== null}
           >
@@ -115,10 +114,10 @@ export default function BackupScreen() {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: MD3Colors.warningContainer }]}>
-              <Upload size={22} color={MD3Colors.warning} />
+            <View style={[styles.cardIcon, { backgroundColor: '#ffe082' }]}>
+              <Upload size={22} color="#b36b00" />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.headerTextContainer}>
               <Text style={styles.primaryBtnText}>Restore Backup</Text>
               <Text style={styles.cardDesc}>Import a previously exported JSON backup. This replaces current data.</Text>
             </View>
@@ -135,34 +134,34 @@ export default function BackupScreen() {
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIcon, { backgroundColor: MD3Colors.tertiaryContainer }]}>
-              <FileJson size={22} color={MD3Colors.tertiary} />
+            <View style={[styles.cardIcon, { backgroundColor: '#e8def8' }]}>
+              <FileJson size={22} color="#6750a4" />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.headerTextContainer}>
               <Text style={styles.primaryBtnText}>Database Structure</Text>
               <Text style={styles.cardDesc}>Compatible format for future Google Drive backup. Schema versioned for forward compatibility.</Text>
             </View>
           </View>
 
           <View style={styles.structRow}>
-            <ShieldCheck size={16} color={MD3Colors.success} />
+            <ShieldCheck size={16} color="#386a20" />
             <Text style={styles.structText}>Versioned JSON snapshot (.json)</Text>
           </View>
 
           <View style={styles.structRow}>
-            <ShieldCheck size={16} color={MD3Colors.success} />
+            <ShieldCheck size={16} color="#386a20" />
             <Text style={styles.structText}>Full tables + sequences preserved</Text>
           </View>
 
           <View style={styles.structRow}>
-            <ShieldCheck size={16} color={MD3Colors.success} />
+            <ShieldCheck size={16} color="#386a20" />
             <Text style={styles.structText}>No external server required</Text>
           </View>
         </View>
 
         {status && (
           <View style={[styles.statusBox, status.includes('failed') ? styles.statusError : styles.statusSuccess]}>
-            <AlertCircle size={18} color={status.includes('failed') ? MD3Colors.error : MD3Colors.success} />
+            <AlertCircle size={18} color={status.includes('failed') ? '#ba1a1a' : '#386a20'} />
             <Text style={styles.statusText}>{status}</Text>
           </View>
         )}
@@ -172,25 +171,26 @@ export default function BackupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: MD3Colors.background },
-  infoBanner: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: MD3Colors.onPrimaryContainer, borderRadius: MD3Radius.md, padding: MD3Spacing.md, margin: MD3Spacing.md },
-  infoText: { flex: 1, fontSize: 13, color: MD3Colors.onPrimaryContainer, marginLeft: MD3Spacing.sm },
-  card: { backgroundColor: '#fff', padding: MD3Spacing.md, borderRadius: MD3Radius.lg, paddingBottom: MD3Spacing.lg, marginBottom: MD3Spacing.md },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
-  cardIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
-  primaryBtnText: { fontSize: 16, color: MD3Colors.onSurfaceVariant, marginBottom: 2, fontWeight: 'bold' },
-  cardDesc: { fontSize: 12, color: MD3Colors.outline, lineHeight: 18 },
-  secondaryBtn: { backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center' },
-  secondaryBtnText: { fontSize: 14, color: '#fff' },
+  container: { flex: 1, backgroundColor: '#ffebee' },
+  scroll: { flex: 1 },
+  infoBanner: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#c2e7ff', borderRadius: 8, padding: 16, margin: 16 },
+  infoText: { flex: 1, fontSize: 13, color: '#001d35', marginLeft: 8 },
+  card: { backgroundColor: '#ffffff', padding: 16, borderRadius: 12, marginBottom: 16, marginHorizontal: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  cardIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  headerTextContainer: { flex: 1 },
+  primaryBtnText: { fontSize: 16, color: '#1d1b20', marginBottom: 2, fontWeight: 'bold' },
+  cardDesc: { fontSize: 12, color: '#49454f', lineHeight: 18 },
+  secondaryBtn: { backgroundColor: '#386a20', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  secondaryBtnText: { fontSize: 14, color: '#ffffff', fontWeight: '600' },
   shareBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  warningBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, alignItems: 'center', backgroundColor: MD3Colors.secondary },
-  warningBtnText: { fontSize: 14, color: '#fff' },
-  timestamp: { fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.sm, textAlign: 'center' },
-  structRow: { flexDirection: 'row', alignItems: 'center', marginTop: MD3Spacing.xs },
-  structText: { fontSize: 13, color: MD3Colors.onSurfaceVariant, marginLeft: MD3Spacing.sm },
-  statusBox: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginHorizontal: MD3Spacing.md, marginBottom: MD3Spacing.md },
-  statusError: { backgroundColor: MD3Colors.errorContainer },
-  statusSuccess: { backgroundColor: MD3Colors.successContainer },
-  statusText: { flex: 1, fontSize: 13 },
+  warningBtn: { borderRadius: 8, paddingVertical: 12, alignItems: 'center', backgroundColor: '#b36b00' },
+  warningBtnText: { fontSize: 14, color: '#ffffff', fontWeight: '600' },
+  timestamp: { fontSize: 11, color: '#49454f', marginTop: 12, textAlign: 'center' },
+  structRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  structText: { fontSize: 13, color: '#1d1b20', marginLeft: 8 },
+  statusBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, padding: 16, marginHorizontal: 16, marginBottom: 16 },
+  statusError: { backgroundColor: '#ffdad6' },
+  statusSuccess: { backgroundColor: '#dfebd5' },
+  statusText: { flex: 1, fontSize: 13, color: '#1d1b20' },
 });
-              
