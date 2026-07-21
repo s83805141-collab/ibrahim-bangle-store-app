@@ -11,27 +11,27 @@ export default function BackupScreen() {
   const [status, setStatus] = useState<string | null>(null);
 
   const handleExportAndShare = useCallback(async () => {
-    setBusy('export');
-    setStatus(null);
-    try {
-      const fileUri = await downloadBackupFile(); 
-      
-      const ts = new Date().toLocaleString('en-US');
-      setLastBackup(ts);
-      setStatus('Backup saved to device.');
+  setBusy('export');
+  setStatus(null);
 
-      Alert.alert(
-  'Success',
-  'Backup created successfully.'
+  try {
+    await downloadBackupFile();
 
-      
-    } catch (e: any) {
-      setStatus('Export failed: ' + (e.message || 'unknown error'));
-      Alert.alert('Error', e.message || 'Could not export backup');
-    } finally {
-      setBusy(null);
-    }
-  }, []);
+    const ts = new Date().toLocaleString('en-US');
+    setLastBackup(ts);
+    setStatus('Backup saved to device.');
+
+    Alert.alert(
+      'Success',
+      'Backup created successfully.'
+    );
+  } catch (e: any) {
+    setStatus('Export failed: ' + (e.message || 'unknown error'));
+    Alert.alert('Error', e.message || 'Could not export backup');
+  } finally {
+    setBusy(null);
+  }
+}, []);
 
   const handleCopyToClipboard = useCallback(async () => {
     setBusy('export');
