@@ -1,4 +1,7 @@
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
 import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, SEED_CATEGORIES } from './schema';
 import type { DatabaseAdapter } from './types';
 
@@ -200,16 +203,37 @@ export async function importBackup(jsonStr: string): Promise<void> {
 
 export async function downloadBackupFile(): Promise<void> {
   const json = await exportBackup();
+
+  const fileName = `ibrahim_bangle_backup_${new Date()
+    .toISOString()
+    .split('T')[0]}.json`;
+
   if (Platform.OS === 'web') {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ibrahim_bangle_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
     URL.revokeObjectURL(url);
+  } else {
+    const fileUri = FileSystem.documentDirectory + fileName;
+
+    await FileSystem.writeAsStringAsync(
+      fileUri,
+      json,
+      {
+        encoding: FileSystem.EncodingType.UTF8,
+      }
+    );
+
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(fileUri);
+    }
   }
-  // Native: caller should use expo-file-system + Sharing to save the JSON
 }
+  
