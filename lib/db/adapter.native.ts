@@ -58,10 +58,12 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
     rows: {
       _array: [],
       length: 0,
-    },
+      },
+    };
   };
-};
-    
+
+  return {
+    exec,
     close: async () => {
       try {
         await db.closeAsync();
