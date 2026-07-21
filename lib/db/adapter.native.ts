@@ -10,18 +10,16 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
   ): Promise<QueryResult> => {
     const cmd = sql.trim().toUpperCase();
 
-    // CREATE TABLE / multiple statements
+    // CREATE TABLE / MULTI-STATEMENT
     if (cmd.startsWith("CREATE")) {
       const statements = sql
         .split(";")
         .map(s => s.trim())
-        .filter(Boolean);
+        .filter(s => s.length > 0);
 
-      await db.withTransactionAsync(async () => {
-        for (const stmt of statements) {
-          await db.execAsync(stmt);
-        }
-      });
+      for (const stmt of statements) {
+        await db.runAsync(stmt);
+      }
 
       return {
         rowsAffected: 0,
@@ -32,7 +30,7 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
       };
     }
 
-    // SELECT
+    // SELECT / PRAGMA
     if (
       cmd.startsWith("SELECT") ||
       cmd.startsWith("PRAGMA") ||
@@ -65,7 +63,9 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
   return {
     exec,
     close: async () => {
-      await db.closeAsync();
+      try {
+        await db.closeAsync();
+      } catch {}
     },
   };
 }
