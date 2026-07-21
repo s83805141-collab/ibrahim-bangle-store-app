@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
-import * as Sharing from 'expo-sharing'; 
+
 import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
 import { exportBackup, importBackup, downloadBackupFile } from '../lib/db/database';
 import { ScreenHeader } from '../components/ui';
@@ -20,16 +20,10 @@ export default function BackupScreen() {
       setLastBackup(ts);
       setStatus('Backup saved to device.');
 
-      if (Platform.OS !== 'web') {
-        const isAvailable = await Sharing.isAvailableAsync();
-        if (isAvailable && fileUri) {
-          await Sharing.shareAsync(fileUri, {
-            mimeType: 'application/json',
-            dialogTitle: 'Send Backup to your Email',
-          });
-        }
-      } else {
-        Alert.alert('Success', 'Backup file downloaded successfully.');
+      Alert.alert(
+  'Success',
+  'Backup created successfully.'
+);
       }
     } catch (e: any) {
       setStatus('Export failed: ' + (e.message || 'unknown error'));
