@@ -23,7 +23,7 @@ export default function BackupScreen() {
       Alert.alert(
   'Success',
   'Backup created successfully.'
-);
+
       
     } catch (e: any) {
       setStatus('Export failed: ' + (e.message || 'unknown error'));
