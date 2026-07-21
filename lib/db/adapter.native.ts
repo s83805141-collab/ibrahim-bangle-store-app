@@ -45,19 +45,23 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
       const rows = await getAll(sql, params);
       return { rowsAffected: 0, rows: { _array: rows, length: rows.length } };
     }
-    if (trimmed.startsWith('CREATE')) {
-      if (typeof (db as any).execAsync === 'function') {
-        try {
-          await (db as any).execAsync(sql);
-        } catch (error) {
-          // CREATE TABLE IF NOT EXISTS might fail silently on some devices
-          console.warn('CREATE statement warning:', error);
-        }
-      } else {
-        // Fallback to run for older versions
-        await run(sql, params);
-      }
-      return { rowsAffected: 0, rows: { _array: [], length: 0 } };
+    if (trimmed.startsWith("CREATE")) {
+  const statements = sql
+    .split(";")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  for (const stmt of statements) {
+    await run(stmt);
+  }
+
+  return {
+    rowsAffected: 0,
+    rows: {
+      _array: [],
+      length: 0,
+    },
+  };
     }
     return run(sql, params);
   };
