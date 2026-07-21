@@ -1,19 +1,42 @@
-import * as SQLite from 'expo-sqlite';
-import type { DatabaseAdapter, QueryResult } from './types';
+import * as SQLite from "expo-sqlite";
+import type { DatabaseAdapter, QueryResult } from "./types";
 
 export async function createAdapter(): Promise<DatabaseAdapter> {
-  const db = await SQLite.openDatabaseAsync('ibrahim_bangle_store.db');
+  const db = await SQLite.openDatabaseAsync("ibrahim_bangle_store.db");
 
   const exec = async (
     sql: string,
     params: any[] = []
   ): Promise<QueryResult> => {
-    const trimmed = sql.trim().toUpperCase();
+    const cmd = sql.trim().toUpperCase();
 
+    // CREATE TABLE / multiple statements
+    if (cmd.startsWith("CREATE")) {
+      const statements = sql
+        .split(";")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      await db.withTransactionAsync(async () => {
+        for (const stmt of statements) {
+          await db.execAsync(stmt);
+        }
+      });
+
+      return {
+        rowsAffected: 0,
+        rows: {
+          _array: [],
+          length: 0,
+        },
+      };
+    }
+
+    // SELECT
     if (
-      trimmed.startsWith('SELECT') ||
-      trimmed.startsWith('PRAGMA') ||
-      trimmed.startsWith('WITH')
+      cmd.startsWith("SELECT") ||
+      cmd.startsWith("PRAGMA") ||
+      cmd.startsWith("WITH")
     ) {
       const rows = await db.getAllAsync(sql, params);
 
@@ -26,18 +49,7 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
       };
     }
 
-    if (trimmed.startsWith('CREATE')) {
-      await db.execAsync(sql);
-
-      return {
-        rowsAffected: 0,
-        rows: {
-          _array: [],
-          length: 0,
-        },
-      };
-    }
-
+    // INSERT / UPDATE / DELETE / ALTER
     const result = await db.runAsync(sql, params);
 
     return {
