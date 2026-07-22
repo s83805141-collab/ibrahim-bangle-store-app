@@ -25,7 +25,9 @@ export async function getDb(): Promise<DatabaseAdapter> {
       if (!isInitialized) {
         try {
           // Execute initial schema
+          console.log("Starting SCHEMA");
           await db.exec(SCHEMA_SQL);
+          console.log("SCHEMA Completed");
           
           // Run migrations
           await runMigration(db);
