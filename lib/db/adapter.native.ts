@@ -3,6 +3,7 @@ import type { DatabaseAdapter, QueryResult } from "./types";
 
 export async function createAdapter(): Promise<DatabaseAdapter> {
   const db = await SQLite.openDatabaseAsync("ibrahim_bangle_store.db");
+  console.log("✅ Database Opened");
 
   const exec = async (
   sql: string,
@@ -22,7 +23,8 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
       .filter(Boolean);
 
     for (const stmt of statements) {
-      await db.execAsync(stmt);
+  console.log("Executing SQL:", stmt);
+  await db.execAsync(stmt);
     }
 
     return {
