@@ -25,22 +25,13 @@ export async function getDb(): Promise<DatabaseAdapter> {
       if (!isInitialized) {
         try {
           // Execute initial schema
-          await db.exec(SCHEMA_SQL);
+          // await db.exec(SCHEMA_SQL);
           
           // Run migrations
-          await runMigration(db);
+          // await runMigration(db);
           
           // Seed default categories if none exist
-          const res = await db.exec('SELECT * FROM categories');
-          if (res.rows.length === 0) {
-            const now = Date.now();
-            for (const name of SEED_CATEGORIES) {
-              await db.exec(
-                'INSERT INTO categories (name, description, created_at) VALUES (?, ?, ?)',
-                [name, '', now]
-              );
-            }
-          }
+    
           isInitialized = true;
         } catch (error) {
           console.error('Database initialization error:', error);
