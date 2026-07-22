@@ -6,60 +6,72 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
   console.log("✅ Database Opened");
 
   const exec = async (
-  sql: string,
-  params: any[] = []
-): Promise<QueryResult> => {
-  const cmd = sql.trim().toUpperCase();
+    sql: string,
+    params: any[] = []
+  ): Promise<QueryResult> => {
+    const cmd = sql.trim().toUpperCase();
 
-  if (
-    cmd.startsWith("CREATE") ||
-    cmd.startsWith("DROP") ||
-    cmd.startsWith("BEGIN") ||
-    cmd.startsWith("COMMIT")
-  ) {
-    const statements = sql
-      .split(";")
-      .map(s => s.trim())
-      .filter(Boolean);
+    // SELECT / PRAGMA
+    if (
+      cmd.startsWith("SELECT") ||
+      cmd.startsWith("PRAGMA") ||
+      cmd.startsWith("WITH")
+    ) {
+      console.log("SELECT:", sql);
 
-    for (const stmt of statements) {
-  console.log("Executing SQL:", stmt);
-  await db.execAsync(stmt);
+      const rows = await db.getAllAsync(sql, params);
+
+      return {
+        rowsAffected: 0,
+        rows: {
+          _array: rows,
+          length: rows.length,
+        },
+      };
     }
 
-    return {
-      rowsAffected: 0,
-      rows: {
-        _array: [],
-        length: 0,
-      },
-    };
+    if (
+  cmd.startsWith("CREATE") ||
+  cmd.startsWith("ALTER") ||
+  cmd.startsWith("DROP")
+) {
+  const statements = sql
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  
+    for (const stmt of statements) {
+  try {
+    console.log("EXEC:", stmt);
+    await db.execAsync(stmt);
+  } catch (e) {
+    console.log("SQL ERROR:", stmt, e);
+    throw e;
   }
+    }
 
-  if (
-    cmd.startsWith("SELECT") ||
-    cmd.startsWith("PRAGMA") ||
-    cmd.startsWith("WITH")
-  ) {
-    const rows = await db.getAllAsync(sql, params);
-
-    return {
-      rowsAffected: 0,
-      rows: {
-        _array: rows,
-        length: rows.length,
-      },
-    };
-  }
-
-  const result = await db.runAsync(sql, params);
 
   return {
-    insertId: result.lastInsertRowId,
-    rowsAffected: result.changes,
+    rowsAffected: 0,
     rows: {
       _array: [],
       length: 0,
+    },
+  };
+  } 
+
+    // INSERT / UPDATE / DELETE / ALTER
+    console.log("RUN:", sql);
+
+    const result = await db.runAsync(sql, params);
+
+    return {
+      insertId: result.lastInsertRowId,
+      rowsAffected: result.changes,
+      rows: {
+        _array: [],
+        length: 0,
       },
     };
   };
@@ -69,7 +81,9 @@ export async function createAdapter(): Promise<DatabaseAdapter> {
     close: async () => {
       try {
         await db.closeAsync();
-      } catch {}
+      } catch (e) {
+        console.log(e);
+      }
     },
   };
 }
