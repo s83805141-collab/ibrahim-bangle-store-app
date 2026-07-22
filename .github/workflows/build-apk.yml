@@ -1,47 +1,26 @@
-name: Build Android APK
+name: EAS Build APK
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+      - run: npm ci
 
-      - name: Install Dependencies
-        run: npm install
+      - run: npm install -g eas-cli
 
-      - name: Clean and Prebuild Android Folder
-        run: |
-          npx expo prebuild --clean --platform android
-
-      # यह जादुई लाइन कोड को APK के अंदर ही पैक कर देगी ताकि कंप्यूटर की ज़रूरत न पड़े
-      - name: Inject Bundle in Debug Config
-        run: |
-          echo "project.ext.react = [ bundleInDebug: true ]" >> android/app/build.gradle
-
-      - name: Build Bundled Debug APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
-          
+      - run: eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
