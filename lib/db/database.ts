@@ -46,8 +46,9 @@ if (res.rows.length === 0) {
     
           isInitialized = true;
         } catch (error) {
-          console.error('Database initialization error:', error);
-          throw error;
+  console.error("DATABASE ERROR:", error);
+  alert(JSON.stringify(error));
+  throw error;
         }
       }
       return db;
