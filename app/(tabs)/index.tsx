@@ -1,5 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Package, Boxes, ShoppingCart, Truck, AlertTriangle, Wallet, Users, TrendingUp, ArrowDownLeft, ArrowUpRight, Receipt, Eye, EyeOff } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
@@ -9,8 +18,12 @@ import { ScreenHeader } from '@/components/ui';
 export default function DashboardScreen() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [showAmounts, setShowAmounts] = useState(false);
+const [loading, setLoading] = useState(true);
+const [showAmounts, setShowAmounts] = useState(false);
+ const [showPinModal, setShowPinModal] = useState(false);
+const [pin, setPin] = useState('');
+const [pinError, setPinError] = useState('');
+const APP_PIN = '1234'; 
 
   const load = useCallback(async () => {
     try {
@@ -27,6 +40,7 @@ export default function DashboardScreen() {
   const formatTime = (ts: number) => new Date(ts).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
+  <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -40,7 +54,17 @@ export default function DashboardScreen() {
     marginBottom: 12,
   }}
 >
-  <TouchableOpacity onPress={() => setShowAmounts(!showAmounts)}>
+  <TouchableOpacity
+  onPress={() => {
+    if (showAmounts) {
+      setShowAmounts(false);
+    } else {
+      setPin('');
+      setPinError('');
+      setShowPinModal(true);
+    }
+  }}
+>
     {showAmounts ? (
       <Eye size={24} color={MD3Colors.primary} />
     ) : (
@@ -151,7 +175,98 @@ export default function DashboardScreen() {
         )}
       </View>
     </ScrollView>
-  );
+    <Modal
+  visible={showPinModal}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowPinModal(false)}
+>
+  <View
+    style={{
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    }}
+  >
+    <View
+      style={{
+        width: '85%',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 20,
+      }}
+    >
+      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>
+        Enter PIN
+      </Text>
+
+      <TextInput
+        value={pin}
+        onChangeText={setPin}
+        placeholder="Enter 4 digit PIN"
+        keyboardType="number-pad"
+        secureTextEntry
+        maxLength={4}
+        style={{
+          borderWidth: 1,
+          borderColor: '#ccc',
+          borderRadius: 8,
+          padding: 12,
+        }}
+      />
+
+      {pinError ? (
+        <Text style={{ color: 'red', marginTop: 8 }}>
+          {pinError}
+        </Text>
+      ) : null}
+
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          marginTop: 20,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            setShowPinModal(false);
+            setPin('');
+            setPinError('');
+          }}
+        >
+          <Text style={{ marginRight: 20 }}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            if (pin === APP_PIN) {
+              setShowAmounts(true);
+              setShowPinModal(false);
+              setPin('');
+              setPinError('');
+            } else {
+              setPinError('Wrong PIN');
+            }
+          }}
+        >
+          <Text
+            style={{
+              color: MD3Colors.primary,
+              fontWeight: 'bold',
+            }}
+          >
+            OK
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
+</>
+);
 }
 
 function StatCard({ icon, label, value, color, small, onPress }: { icon: React.ReactNode; label: string; value: any; color: string; small?: boolean; onPress?: () => void }) {
