@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Package, Boxes, ShoppingCart, Truck, AlertTriangle, Wallet, Users, TrendingUp, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react-native';
+import { Package, Boxes, ShoppingCart, Truck, AlertTriangle, Wallet, Users, TrendingUp, ArrowDownLeft, ArrowUpRight, Receipt, Eye, EyeOff } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getDashboardStats } from '@/lib/db/repo';
 import { ScreenHeader } from '@/components/ui';
@@ -10,6 +10,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showAmounts, setShowAmounts] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -32,7 +33,21 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
     >
       <ScreenHeader title="Ibrahim Bangle Store" subtitle="Wholesale & Retail Inventory" />
-
+<View
+  style={{
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 12,
+  }}
+>
+  <TouchableOpacity onPress={() => setShowAmounts(!showAmounts)}>
+    {showAmounts ? (
+      <Eye size={24} color={MD3Colors.primary} />
+    ) : (
+      <EyeOff size={24} color={MD3Colors.primary} />
+    )}
+  </TouchableOpacity>
+</View>
       <View style={styles.welcomeCard}>
         <View style={styles.welcomeTextWrap}>
           <Text style={styles.welcomeTitle}>Assalamu Alaikum!</Text>
@@ -61,7 +76,7 @@ export default function DashboardScreen() {
         <StatCard
           icon={<Truck size={24} color={MD3Colors.secondary} />}
           label="Today's Purchase"
-          value={formatCurrency(stats?.todayPurchase ?? 0)}
+          value={showAmounts ? formatCurrency(stats?.todayPurchase ?? 0) : "₹******"}
           color={MD3Colors.secondaryContainer}
           small
           onPress={() => router.push('/purchases')}
@@ -69,7 +84,7 @@ export default function DashboardScreen() {
         <StatCard
           icon={<ShoppingCart size={24} color={MD3Colors.primary} />}
           label="Today's Sales"
-          value={formatCurrency(stats?.todaySales ?? 0)}
+          value={showAmounts ? formatCurrency(stats?.todaySales ?? 0) : "₹******"}
           color={MD3Colors.primaryContainer}
           small
           onPress={() => router.push('/(tabs)/sales')}
@@ -84,7 +99,7 @@ export default function DashboardScreen() {
         <StatCard
           icon={<Wallet size={24} color={MD3Colors.error} />}
           label="Pending Supplier"
-          value={formatCurrency(stats?.pendingSupplierBalance ?? 0)}
+          value={showAmounts ? formatCurrency(stats?.pendingSupplierBalance ?? 0) : "₹******"}
           color={MD3Colors.errorContainer}
           small
           onPress={() => router.push('/supplier-ledger')}
@@ -92,7 +107,7 @@ export default function DashboardScreen() {
         <StatCard
           icon={<Users size={24} color={MD3Colors.tertiary} />}
           label="Pending Customer"
-          value={formatCurrency(stats?.pendingCustomerBalance ?? 0)}
+          value={showAmounts ? formatCurrency(stats?.pendingCustomerBalance ?? 0) : "₹******"}
           color={MD3Colors.tertiaryContainer}
           small
           onPress={() => router.push('/customer-ledger')}
@@ -125,7 +140,11 @@ export default function DashboardScreen() {
                   <Text style={styles.txLabel} numberOfLines={1}>{tx.label}</Text>
                   <Text style={styles.txTime}>{formatTime(tx.date)}</Text>
                 </View>
-                <Text style={[styles.txAmount, { color }]}>{isPurchase ? '-' : '+'}{formatCurrency(tx.amount)}</Text>
+                <Text style={[styles.txAmount, { color }]}>
+  {showAmounts
+    ? `${isPurchase ? '-' : '+'}${formatCurrency(tx.amount)}`
+    : "₹******"}
+</Text>
               </View>
             );
           })
