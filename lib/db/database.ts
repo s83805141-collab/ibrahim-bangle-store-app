@@ -27,6 +27,11 @@ export async function getDb(): Promise<DatabaseAdapter> {
           // Execute initial schema
           console.log("Starting SCHEMA");
           await db.exec(SCHEMA_SQL);
+          const check = await db.exec(
+  "SELECT name FROM sqlite_master WHERE type='table'"
+);
+
+console.log(check.rows._array);
           console.log("SCHEMA Completed");
           
           // Run migrations
