@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, SEED_CATEGORIES } from './schema';
@@ -228,7 +228,7 @@ export async function downloadBackupFile(): Promise<void> {
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);o
+    document.body.removeChild(a);
 
     URL.revokeObjectURL(url);
   } else {
