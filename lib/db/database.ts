@@ -228,19 +228,16 @@ export async function downloadBackupFile(): Promise<void> {
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    document.body.removeChild(a);o
 
     URL.revokeObjectURL(url);
   } else {
     const fileUri = FileSystem.documentDirectory + fileName;
 
     await FileSystem.writeAsStringAsync(
-      fileUri,
-      json,
-      {
-        encoding: FileSystem.EncodingType.UTF8,
-      }
-    );
+  fileUri,
+  json
+);
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(fileUri);
