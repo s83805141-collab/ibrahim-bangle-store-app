@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "306678877484",
+    "project_id": "ibrahim-bangle-store-81535",
+    "storage_bucket": "ibrahim-bangle-store-81535.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:306678877484:android:b2ba50b6e6704a54e73089",
+        "android_client_info": {
+          "package_name": "com.ibrahimbanglestore.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAV78n8YEn49nfM83eUMg2Ug8ZCEtSuc5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
