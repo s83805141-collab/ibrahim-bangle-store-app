@@ -124,6 +124,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
   const [otherCharges, setOtherCharges] = useState('');
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [note, setNote] = useState('');
+  const [billImage, setBillImage] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -185,7 +186,17 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
       updatePayment(i, 'upiId', account.upi_id || '');
     }
   };
+const pickBillImage = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 0.8,
+  });
 
+  if (!result.canceled) {
+    setBillImage(result.assets[0].uri);
+  }
+};
   const handleSave = async () => {
     if (!supplierId) { setError('Please select a supplier'); return; }
     const validItems = lineItems.filter(li => li.productId && parseFloat(li.quantity) > 0);
@@ -216,7 +227,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
         payment_method: (paymentInputs[0]?.payment_mode || 'Cash') as any, transaction_number: paymentInputs[0]?.transaction_number || '', note: note.trim(),
         payment_date: paymentInputs[0]?.payment_date || dateTs, payment_time: paymentInputs[0]?.payment_time || '',
         upi_id: paymentInputs[0]?.upi_id || '', reference_number: paymentInputs[0]?.reference_number || '',
-        payment_screenshot: paymentInputs[0]?.proof_images?.[0] || '',
+        payment_screenshot: billImage,
       };
       await addPurchase(header, items, paymentInputs);
       onSaved();
@@ -306,7 +317,37 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
                     <Input label="Transport (Rs)" value={transportCharges} onChangeText={setTransportCharges} keyboardType="numeric" placeholder="0" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
                     <Input label="Other Charges (Rs)" value={otherCharges} onChangeText={setOtherCharges} keyboardType="numeric" placeholder="0" style={{ flex: 1 }} />
                   </View>
-                  <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Grand Total</Text><Text style={[styles.summaryValue, { fontSize: 18 }]}>{formatRs(grandTotal)}</Text></View>
+                  <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Grand Total</Text><Text style={[styles.summaryValue, { fontSize: 18 }]}>{formatRs(grandTotal)}</Text></View><Text style={styles.fieldLabel}>Purchase Bill</Text>
+
+<TouchableOpacity
+  onPress={pickBillImage}
+  style={{
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginTop: 10,
+  }}
+>
+  <Camera size={20} color={MD3Colors.primary} />
+  <Text style={{ marginLeft: 10 }}>
+    {billImage ? 'Change Bill Photo' : 'Attach Bill Photo'}
+  </Text>
+</TouchableOpacity>
+
+{billImage ? (
+  <Image
+    source={{ uri: billImage }}
+    style={{
+      width: 120,
+      height: 120,
+      marginTop: 10,
+      borderRadius: 8,
+    }}
+  />
+) : null}
                 </View>
 
                 <View style={styles.itemsHeader}>
