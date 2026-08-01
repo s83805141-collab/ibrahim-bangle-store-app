@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     await GoogleSignin.hasPlayServices();
+    const userInfo = await GoogleSignin.signIn();
 
 };
   const router = useRouter();
