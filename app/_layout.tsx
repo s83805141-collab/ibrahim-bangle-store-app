@@ -9,6 +9,7 @@ import {
   Roboto_700Bold,
 } from '@expo-google-fonts/roboto';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { MD3Colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
