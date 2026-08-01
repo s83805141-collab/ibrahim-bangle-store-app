@@ -16,6 +16,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
+  GoogleSignin.configure({
+  webClientId:
+    '821913372504-hfgride0tbp74o6otdklrm6b6tahgkvn.apps.googleusercontent.com',
+});
 
   const [fontsLoaded, fontError] = useFonts({
     'Roboto-Regular': Roboto_400Regular,
