@@ -1,9 +1,18 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 
 import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
 import { exportBackup, importBackup, downloadBackupFile } from '../lib/db/database';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { ScreenHeader } from '../components/ui';
 
 export default function BackupScreen() {
@@ -52,9 +61,32 @@ export default function BackupScreen() {
     }
   }, []);
 
-  const triggerFilePicker = () => {
-    Alert.alert('Restore', 'File Import feature configured.');
-  };
+  const triggerFilePicker = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/json',
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) return;
+
+    const file = result.assets[0];
+
+    const json = await FileSystem.readAsStringAsync(file.uri);
+
+    await importBackup(json);
+
+    Alert.alert(
+      'Success',
+      'Backup restored successfully.'
+    );
+  } catch (e: any) {
+    Alert.alert(
+      'Restore Failed',
+      e?.message || 'Could not restore backup.'
+    );
+  }
+};
 
   return (
     <View style={styles.container}>
