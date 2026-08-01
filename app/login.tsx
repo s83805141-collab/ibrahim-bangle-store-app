@@ -7,6 +7,8 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     await GoogleSignin.hasPlayServices();
     const userInfo = await GoogleSignin.signIn();
+    console.log(userInfo);
+    router.replace('/(tabs)');
 
 };
   const router = useRouter();
@@ -31,10 +33,7 @@ export default function LoginScreen() {
       </Text>
 
       <TouchableOpacity
-        onPress={() => {
-          // अगले स्टेप में यहाँ Google Sign-In आएगा
-          router.replace('/(tabs)');
-        }}
+        onPress={handleGoogleSignIn}
         style={{
           backgroundColor: '#4285F4',
           padding: 15,
