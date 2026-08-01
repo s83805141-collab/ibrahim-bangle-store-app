@@ -4,6 +4,10 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Alert } from 'react-native';
 
 export default function LoginScreen() {
+  const handleGoogleSignIn = async () => {
+    await GoogleSignin.hasPlayServices();
+
+};
   const router = useRouter();
 
   return (
