@@ -40,9 +40,10 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+  <Stack.Screen name="login" />
+  <Stack.Screen name="(tabs)" />
+  <Stack.Screen name="+not-found" />
+</Stack>
       <StatusBar style="dark" backgroundColor={MD3Colors.background} />
     </>
   );
