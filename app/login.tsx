@@ -4,14 +4,24 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Alert } from 'react-native';
 
 export default function LoginScreen() {
-  const handleGoogleSignIn = async () => {
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    console.log(userInfo);
-    router.replace('/(tabs)');
-
-};
   const router = useRouter();
+  const handleGoogleSignIn = async () => {
+  try {
+    await GoogleSignin.hasPlayServices();
+
+    const userInfo = await GoogleSignin.signIn();
+
+    console.log(userInfo);
+
+    router.replace('/(tabs)');
+  } catch (error: any) {
+    Alert.alert(
+      'Login Failed',
+      error?.message || 'Google Sign-In failed'
+    );
+  }
+};
+  
 
   return (
     <View
