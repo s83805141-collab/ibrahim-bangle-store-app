@@ -10,6 +10,10 @@ export default function LoginScreen() {
     await GoogleSignin.hasPlayServices();
 
     const userInfo = await GoogleSignin.signIn();
+    Alert.alert(
+  'Login Successful',
+  `Welcome ${userInfo.data?.user?.name ?? 'User'}`
+);
 
     console.log(userInfo);
 
