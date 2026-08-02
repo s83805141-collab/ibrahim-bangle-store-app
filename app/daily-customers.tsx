@@ -1,21 +1,97 @@
-import { View, Text } from 'react-native';
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 
 export default function DailyCustomersScreen() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      <Text style={{ fontSize: 22, fontWeight: 'bold' }}>
-        Daily Customer Entry
-      </Text>
+  const [customerName, setCustomerName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [billNo, setBillNo] = useState('');
+  const [billAmount, setBillAmount] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
 
-      <Text style={{ marginTop: 10 }}>
-        Screen Successfully Created
-      </Text>
-    </View>
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Daily Customer Entry</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Customer Name"
+        value={customerName}
+        onChangeText={setCustomerName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Mobile Number"
+        keyboardType="phone-pad"
+        value={mobile}
+        onChangeText={setMobile}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Bill Number"
+        value={billNo}
+        onChangeText={setBillNo}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Bill Amount"
+        keyboardType="numeric"
+        value={billAmount}
+        onChangeText={setBillAmount}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Paid Amount"
+        keyboardType="numeric"
+        value={paidAmount}
+        onChangeText={setPaidAmount}
+      />
+
+      <TouchableOpacity style={styles.button}>
+        <Text style={styles.buttonText}>Save Entry</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: '#1976D2',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});
