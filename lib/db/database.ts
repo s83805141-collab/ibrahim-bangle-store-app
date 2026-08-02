@@ -78,7 +78,7 @@ export async function resetDatabase(): Promise<void> {
       'supplier_payments', 'payment_proof_images', 'purchase_items',
       'sale_items', 'purchase_headers', 'sale_headers', 'product_variants',
       'products', 'supplier_ledger', 'customer_ledger', 'bank_accounts',
-      'suppliers', 'customers', 'categories', 'settings',
+      'suppliers', 'customers', 'categories','daily_customer_entries', 'settings',
     ];
     for (const t of allTables) {
       try {
@@ -158,7 +158,7 @@ export async function exportBackup(): Promise<string> {
       'purchase_headers', 'purchase_items', 'sale_headers', 'sale_items',
       'supplier_ledger', 'customer_ledger', 'supplier_payments', 'customer_payments',
       'payment_proof_images', 'customer_payment_images', 'bank_accounts',
-      'stock_movements', 'settings',
+      'stock_movements','daily_customer_entries', 'settings',
     ];
     const dump: Record<string, any[]> = {};
     for (const t of tables) {
