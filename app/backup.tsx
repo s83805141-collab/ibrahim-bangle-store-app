@@ -12,7 +12,7 @@ import {
 import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2 } from 'lucide-react-native';
 import { exportBackup, importBackup, downloadBackupFile } from '../lib/db/database';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ScreenHeader } from '../components/ui';
 
 export default function BackupScreen() {
