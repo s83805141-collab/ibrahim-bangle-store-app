@@ -219,6 +219,22 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS daily_customer_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_name TEXT NOT NULL,
+  mobile TEXT DEFAULT '',
+  bill_no TEXT DEFAULT '',
+  bill_amount REAL NOT NULL DEFAULT 0,
+  paid_amount REAL NOT NULL DEFAULT 0,
+  balance_amount REAL NOT NULL DEFAULT 0,
+  payment_mode TEXT DEFAULT 'Cash',
+  payment_status TEXT DEFAULT 'Pending',
+  bill_photo TEXT DEFAULT '',
+  payment_photo TEXT DEFAULT '',
+  notes TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 // Migration: expand suppliers table with new columns and add purchase
@@ -286,7 +302,22 @@ ALTER TABLE purchase_headers ADD COLUMN payment_screenshot TEXT DEFAULT '';
 `;
 
 export const MIGRATION_SQL_3 = `
--- Placeholder for future migrations
+CREATE TABLE IF NOT EXISTS daily_customer_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_name TEXT NOT NULL,
+  mobile TEXT DEFAULT '',
+  bill_no TEXT DEFAULT '',
+  bill_amount REAL NOT NULL DEFAULT 0,
+  paid_amount REAL NOT NULL DEFAULT 0,
+  balance_amount REAL NOT NULL DEFAULT 0,
+  payment_mode TEXT DEFAULT 'Cash',
+  payment_status TEXT DEFAULT 'Pending',
+  bill_photo TEXT DEFAULT '',
+  payment_photo TEXT DEFAULT '',
+  notes TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `;
 
 export const SEED_CATEGORIES = [
