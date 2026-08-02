@@ -10,7 +10,22 @@ import {
   TextInput,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Package, Boxes, ShoppingCart, Truck, AlertTriangle, Wallet, Users, TrendingUp, ArrowDownLeft, ArrowUpRight, Receipt, Eye, EyeOff } from 'lucide-react-native';
+import {
+  Package,
+  Boxes,
+  ShoppingCart,
+  Truck,
+  AlertTriangle,
+  Wallet,
+  Users,
+  TrendingUp,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Receipt,
+  Eye,
+  EyeOff,
+  UserRound,
+} from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getDashboardStats } from '@/lib/db/repo';
 import { ScreenHeader } from '@/components/ui';
@@ -143,6 +158,13 @@ const APP_PIN = '1234';
           color={MD3Colors.successContainer}
           onPress={() => router.push('/(tabs)/sales')}
         />
+        <StatCard
+  icon={<UserRound size={24} color={MD3Colors.primary} />}
+  label="Daily Customer"
+  value="Open"
+  color={MD3Colors.primaryContainer}
+  onPress={() => router.push('/daily-customers')}
+/>
       </View>
 
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
