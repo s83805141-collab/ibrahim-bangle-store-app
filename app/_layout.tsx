@@ -10,7 +10,7 @@ import {
 } from '@expo-google-fonts/roboto';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { MD3Colors } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -27,20 +27,20 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId:
-    
-    '821913372504-hfgride0tbp74o6otdklrm6b6tahgkvn.apps.googleusercontent.com',
-});
-    
-  AsyncStorage.getItem('isLoggedIn').then((value) => {
-    console.log('Login status:', value);
+  GoogleSignin.configure({
+    webClientId:
+      '821913372504-hfgride0tbp74o6otdklrm6b6tahgkvn.apps.googleusercontent.com',
   });
+}, []);
 
+useEffect(() => {
   if (fontsLoaded || fontError) {
     SplashScreen.hideAsync();
   }
 }, [fontsLoaded, fontError]);
+  if (!fontsLoaded && !fontError) {
+  return null;
+  }
 
   return (
     <>
