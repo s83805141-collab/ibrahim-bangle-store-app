@@ -1753,5 +1753,48 @@ export async function getDailySalesReport(startDate: number, endDate: number): P
     ex.count += 1;
     byDay.set(dayKey, ex);
   }
+  export interface DailyCustomerEntry {
+  id?: number;
+  customer_name: string;
+  mobile: string;
+  bill_number: string;
+  bill_amount: number;
+  paid_amount: number;
+  screenshot: string;
+  created_at?: number;
+}
+
+export async function addDailyCustomerEntry(
+  entry: DailyCustomerEntry
+): Promise<number> {
+  const db = await getDb();
+
+  const res = await db.exec(
+    `INSERT INTO daily_customer_entries
+    (customer_name, mobile, bill_number, bill_amount, paid_amount, screenshot, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      entry.customer_name,
+      entry.mobile,
+      entry.bill_number,
+      entry.bill_amount,
+      entry.paid_amount,
+      entry.screenshot || "",
+      Date.now(),
+    ]
+  );
+
+  return res.insertId!;
+}
+
+export async function getDailyCustomerEntries() {
+  const db = await getDb();
+
+  const res = await db.exec(
+    "SELECT * FROM daily_customer_entries ORDER BY created_at DESC"
+  );
+
+  return res.rows._array;
+}
   return Array.from(byDay.entries()).map(([date, v]) => ({ date, ...v })).sort((a, b) => a.date - b.date);
 }
