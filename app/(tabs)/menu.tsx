@@ -14,6 +14,7 @@ const MENU_ITEMS = [
   { title: 'Purchase Management', subtitle: 'Record stock purchases', icon: ClipboardList, color: MD3Colors.accent, bg: '#B2DFDB', route: '/purchases' },
   { title: 'Supplier Ledger', subtitle: 'Supplier payments & dues', icon: BookOpen, color: MD3Colors.secondary, bg: MD3Colors.secondaryContainer, route: '/supplier-ledger' },
   { title: 'Bank Accounts', subtitle: 'Manage bank & UPI accounts', icon: Landmark, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/bank-accounts' },
+  { title: 'Daily Customer', subtitle: 'Record daily customer bills', icon: Wallet, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/daily-customer-entry' },
   { title: 'Customer Ledger', subtitle: 'Customer payments & dues', icon: BookOpen, color: MD3Colors.error, bg: MD3Colors.errorContainer, route: '/customer-ledger' },
   { title: 'Stock Management', subtitle: 'View & adjust inventory', icon: Boxes, color: MD3Colors.accent, bg: '#B2DFDB', route: '/stock' },
   { title: 'Reports', subtitle: 'Sales & stock reports', icon: BarChart3, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/reports' },
@@ -36,7 +37,7 @@ export default function MenuScreen() {
               style={styles.menuCard}
               onPress={() => router.push(item.route as any)}
             >
-              <View style={[styles.menuIcon, { backgroundColor: item.bg }]}>
+              <View style={[styles.menuIcon, { backgroundColor: item.bg }]}> 
                 <Icon size={24} color={item.color} />
               </View>
               <View style={styles.menuInfo}>
