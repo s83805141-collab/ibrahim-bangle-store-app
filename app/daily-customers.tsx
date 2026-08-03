@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { addDailyCustomer } from "../lib/dailyCustomers";
 import {
   View,
   Text,
@@ -6,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 
 export default function DailyCustomersScreen() {
@@ -14,6 +16,28 @@ export default function DailyCustomersScreen() {
   const [billNo, setBillNo] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
+  const saveEntry = async () => {
+  try {
+    await addDailyCustomer({
+      customer_name: customerName,
+      mobile,
+      bill_no: billNo,
+      bill_amount: Number(billAmount) || 0,
+      paid_amount: Number(paidAmount) || 0,
+    });
+
+    Alert.alert("Success", "Entry Save Ho Gayi");
+
+    setCustomerName("");
+    setMobile("");
+    setBillNo("");
+    setBillAmount("");
+    setPaidAmount("");
+  } catch (e) {
+    console.log(e);
+    Alert.alert("Error", "Entry Save Nahi Hui");
+  }
+};
 
   return (
     <ScrollView style={styles.container}>
@@ -57,9 +81,12 @@ export default function DailyCustomersScreen() {
         onChangeText={setPaidAmount}
       />
 
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Save Entry</Text>
-      </TouchableOpacity>
+      <TouchableOpacity
+  style={styles.button}
+  onPress={saveEntry}
+>
+  <Text style={styles.buttonText}>Save Entry</Text>
+</TouchableOpacity>
     </ScrollView>
   );
 }
