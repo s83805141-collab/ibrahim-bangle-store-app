@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addDailyCustomer } from "../lib/dailyCustomers";
+import { addDailyCustomer } from "../lib/db/dailyCustomers";
 import {
   View,
   Text,
