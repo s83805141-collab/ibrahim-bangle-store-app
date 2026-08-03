@@ -1,0 +1,16 @@
+*   [33m4788e9b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix package.json and update lock file
+[31m|[m[32m\[m  
+* [32m|[m [33mae38c82[m Fix package-lock sync
+* [32m|[m [33m6ba7d2f[m Update package-lock for expo-document-picker
+[32m|[m [32m|[m * [33mab42428[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update FileSystem import from legacy to current
+[32m|[m [32m|[m * [33m381e885[m Update package.json
+[32m|[m [32m|[m * [33md8aa87c[m Update package.json
+[32m|[m [32m|[m * [33m3835e00[m Update babel.config.js
+[32m|[m [32m|[m * [33m016cc43[m Update build workflow for Android APK
+[32m|[m [32m|[m * [33m2490ba4[m Update package.json
+[32m|[m [32m|[m * [33mb07e027[m Add expo-image-picker, expo-camera, and expo-font dependencies
+[32m|[m [32m|[m * [33m2878e60[m Update package.json
+[32m|[m [32m|[m * [33md4933d2[m Update package.json
+[32m|[m [32m|[m * [33m1a19293[m Update build-apk.yml
+[32m|[m [32m|[m * [33mcde84d4[m Update GitHub Actions workflow for APK build
+[32m|[m [32m|[m * [33m9b6ccd7[m Update package.json
