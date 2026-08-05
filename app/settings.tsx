@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Settings as SettingsIcon, Store, MapPin, Phone, Heart, Check } from 'lucide-react-native';
-import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { Settings as SettingsIcon, Store, MapPin, Phone, Heart, Check, RotateCcw, Save, Info, ShieldCheck } from 'lucide-react-native';
+import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 import { getSettings, saveSettings, DEFAULT_SETTINGS, ShopSettings } from '@/lib/db/repo';
 import { Button, Input, ScreenHeader } from '@/components/ui';
 
@@ -57,44 +59,65 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <ScreenHeader title="Settings" subtitle="Shop information & preferences" />
       <ScrollView contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}>
-        <View style={styles.section}>
+        {/* Shop Information Section */}
+        <Animated.View entering={FadeInDown.duration(300).delay(0)} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}><Store size={20} color={MD3Colors.primary} /></View>
-            <Text style={styles.sectionTitle}>Shop Information</Text>
+            <View style={[styles.sectionIcon, { backgroundColor: MD3Colors.primaryContainer }]}>
+              <Store size={20} color={MD3Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Shop Information</Text>
+              <Text style={styles.sectionDesc}>Appears on all generated invoices</Text>
+            </View>
           </View>
-          <Text style={styles.sectionDesc}>This information appears on all generated invoices.</Text>
           <Input label="Shop Name" value={shopName} onChangeText={setShopName} placeholder="Ibrahim Bangle Store" />
           <Input label="Address" value={shopAddress} onChangeText={setShopAddress} placeholder="Baggi Road, Gonda" multiline />
           <Input label="Phone Number" value={shopPhone} onChangeText={setShopPhone} keyboardType="phone-pad" placeholder="Phone number" />
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
+        {/* Invoice Footer Section */}
+        <Animated.View entering={FadeInDown.duration(300).delay(80)} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}><Heart size={20} color={MD3Colors.error} /></View>
-            <Text style={styles.sectionTitle}>Invoice Footer</Text>
+            <View style={[styles.sectionIcon, { backgroundColor: MD3Colors.errorContainer }]}>
+              <Heart size={20} color={MD3Colors.error} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Invoice Footer</Text>
+              <Text style={styles.sectionDesc}>Thank-you message on invoices</Text>
+            </View>
           </View>
-          <Text style={styles.sectionDesc}>Thank-you message shown at the bottom of invoices.</Text>
           <Input label="Footer Message" value={shopFooter} onChangeText={setShopFooter} placeholder="Thank You For Shopping..." multiline />
-        </View>
+        </Animated.View>
 
+        {/* Action Buttons */}
         <View style={styles.buttonRow}>
-          <Button title="Reset to Defaults" variant="outlined" onPress={handleReset} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-          <Button title={saved ? 'Saved!' : 'Save Settings'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
+          <Button title="Reset" variant="outlined" intent="cancel" onPress={handleReset} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
+          <Button title={saved ? 'Saved!' : 'Save Settings'} intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
         </View>
 
         {saved && (
-          <View style={styles.savedBanner}>
+          <Animated.View entering={FadeIn.duration(300)} style={styles.savedBanner}>
             <Check size={18} color={MD3Colors.success} />
             <Text style={styles.savedText}>Settings saved successfully</Text>
-          </View>
+          </Animated.View>
         )}
 
-        <View style={styles.aboutCard}>
-          <Text style={styles.aboutTitle}>About</Text>
+        {/* About Card */}
+        <Animated.View entering={FadeInDown.duration(300).delay(160)} style={styles.aboutCard}>
+          <View style={styles.aboutHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: MD3Colors.tertiaryContainer }]}>
+              <Info size={20} color={MD3Colors.tertiary} />
+            </View>
+            <Text style={styles.sectionTitle}>About</Text>
+          </View>
           <Text style={styles.aboutText}>Ibrahim Bangle Store POS</Text>
           <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           <Text style={styles.aboutDesc}>Offline-first inventory & billing management. All data is stored locally on your device.</Text>
-        </View>
+          <View style={styles.aboutFeatureRow}>
+            <ShieldCheck size={14} color={MD3Colors.success} />
+            <Text style={styles.aboutFeature}>Data stays on device</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -102,17 +125,40 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  section: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.lg, marginBottom: MD3Spacing.md, ...MD3Elevation.level1 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.xs },
-  sectionIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: MD3Colors.primaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.sm },
+  section: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.lg,
+    marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level2,
+  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
+  sectionIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
   sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 18, color: MD3Colors.onSurface },
-  sectionDesc: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.md, marginLeft: MD3Spacing.xl },
+  sectionDesc: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
   buttonRow: { flexDirection: 'row', marginBottom: MD3Spacing.md },
-  savedBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: MD3Spacing.sm, backgroundColor: MD3Colors.successContainer, borderRadius: MD3Radius.sm, paddingVertical: MD3Spacing.sm, marginBottom: MD3Spacing.md },
+  savedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: MD3Spacing.sm,
+    backgroundColor: MD3Colors.successContainer,
+    borderRadius: MD3Radius.md,
+    paddingVertical: MD3Spacing.sm + 2,
+    marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level1,
+  },
   savedText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.success },
-  aboutCard: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.lg, ...MD3Elevation.level1 },
-  aboutTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: MD3Spacing.sm },
-  aboutText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface, marginBottom: 2 },
-  aboutVersion: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.sm },
-  aboutDesc: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, lineHeight: 20 },
+  aboutCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.lg,
+    ...MD3Elevation.level2,
+  },
+  aboutHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
+  aboutText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 2 },
+  aboutVersion: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.primary, marginBottom: MD3Spacing.sm },
+  aboutDesc: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, lineHeight: 20, marginBottom: MD3Spacing.md },
+  aboutFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MD3Colors.successContainer, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, paddingVertical: 6, alignSelf: 'flex-start' },
+  aboutFeature: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.success },
 });

@@ -1,20 +1,33 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, FlatList, Share, Platform } from 'react-native';
+import { useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Share, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { BarChart3, Truck, Wallet, ClipboardList, Calendar, X, FileText, TrendingUp, AlertCircle } from 'lucide-react-native';
-import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { BarChart3, Truck, Wallet, ClipboardList, Calendar, X, FileText, TrendingUp, AlertCircle, Package } from 'lucide-react-native';
+import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 import {
   getSupplierOutstandingReport, getPurchaseReport, getPaymentReport, getMonthlyPurchaseReport,
   getSalesReport, getProfitReport, getCustomerOutstandingReport, getStockReport,
   SupplierOutstandingReport, PurchaseHeaderWithDetails, SupplierPayment,
   SalesReportRow, ProfitReportRow, CustomerOutstandingReport, StockReportRow,
 } from '@/lib/db/repo';
-import { Button, Input, ScreenHeader } from '@/components/ui';
+import { Button, Input, EmptyState, ScreenHeader, StatusBadge, PremiumModal } from '@/components/ui';
 import { WebView } from 'react-native-webview';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type ReportTab = 'outstanding' | 'purchases' | 'payments' | 'monthly' | 'sales' | 'profit' | 'custOutstanding' | 'stock';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const TABS: { key: ReportTab; label: string; icon: any; gradient: string[] }[] = [
+  { key: 'outstanding', label: 'Sup Due', icon: AlertCircle, gradient: MD3Gradients.delete },
+  { key: 'purchases', label: 'Purchases', icon: ClipboardList, gradient: MD3Gradients.update },
+  { key: 'payments', label: 'Payments', icon: Wallet, gradient: MD3Gradients.payment },
+  { key: 'monthly', label: 'Monthly', icon: BarChart3, gradient: MD3Gradients.primary },
+  { key: 'sales', label: 'Sales', icon: TrendingUp, gradient: MD3Gradients.update },
+  { key: 'profit', label: 'Profit', icon: BarChart3, gradient: MD3Gradients.save },
+  { key: 'custOutstanding', label: 'Cust Due', icon: AlertCircle, gradient: MD3Gradients.view },
+  { key: 'stock', label: 'Stock', icon: Package, gradient: MD3Gradients.purple },
+];
 
 export default function ReportsScreen() {
   const [tab, setTab] = useState<ReportTab>('outstanding');
@@ -68,6 +81,12 @@ export default function ReportsScreen() {
   const totalCustOutstanding = custOutstanding.reduce((s, r) => s + r.outstanding, 0);
   const totalStockValue = stockReport.reduce((s, r) => s + r.stock_value, 0);
 
+  const currentTab = TABS.find(t => t.key === tab)!;
+  const summaryLabel = tab === 'outstanding' ? 'Total Outstanding' : tab === 'purchases' ? `Total Purchases (${purchases.length})` : tab === 'payments' ? `Total Payments (${payments.length})` : tab === 'monthly' ? `Yearly Total (${year})` : tab === 'sales' ? `Total Sales (${sales.length})` : tab === 'profit' ? `Total Profit (${profit.length})` : tab === 'custOutstanding' ? 'Total Customer Due' : 'Total Stock Value';
+  const summaryValue = tab === 'outstanding' ? totalOutstanding : tab === 'purchases' ? totalPurchases : tab === 'payments' ? totalPayments : tab === 'monthly' ? monthlyTotal : tab === 'sales' ? totalSales : tab === 'profit' ? totalProfit : tab === 'custOutstanding' ? totalCustOutstanding : totalStockValue;
+  const summaryGradient = currentTab.gradient;
+  const hasDateFilter = tab === 'purchases' || tab === 'payments' || tab === 'sales' || tab === 'profit';
+
   const generateReportHTML = (): string => {
     let title = '';
     let bodyRows = '';
@@ -99,6 +118,46 @@ export default function ReportsScreen() {
         <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(p.amount)}</td></tr>
       `).join('');
       summaryRows = `<div class="total-row outstanding"><span>Total Payments</span><span>${formatRs(totalPayments)}</span></div>`;
+    } else if (tab === 'sales') {
+      title = 'Sales Report';
+      bodyRows = sales.map(s => `
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${formatDate(s.date)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${s.invoice_number || `#${s.id}`}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${s.customer_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(s.grand_total)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(s.amount_received)}</td></tr>
+      `).join('');
+      summaryRows = `<div class="total-row"><span>Total Sales</span><span>${formatRs(totalSales)}</span></div><div class="total-row"><span>Total Received</span><span>${formatRs(totalReceived)}</span></div>`;
+    } else if (tab === 'profit') {
+      title = 'Profit Report';
+      bodyRows = profit.map(p => `
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${formatDate(p.date)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${p.invoice_number || 'Sale'}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${p.customer_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(p.revenue)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(p.cost)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:${p.profit >= 0 ? '#2E7D32' : '#C62828'};">${formatRs(p.profit)}</td></tr>
+      `).join('');
+      summaryRows = `<div class="total-row outstanding"><span>Total Profit</span><span>${formatRs(totalProfit)}</span></div>`;
+    } else if (tab === 'custOutstanding') {
+      title = 'Customer Outstanding Report';
+      bodyRows = custOutstanding.map(c => `
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${c.customer_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(c.total_purchase)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(c.total_paid)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#C62828;">${formatRs(c.outstanding)}</td></tr>
+      `).join('');
+      summaryRows = `<div class="total-row outstanding"><span>Total Outstanding</span><span>${formatRs(totalCustOutstanding)}</span></div>`;
+    } else if (tab === 'stock') {
+      title = 'Stock Report';
+      bodyRows = stockReport.map(s => `
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${s.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${s.category_name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${s.total_stock} ${s.unit}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${s.status}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${formatRs(s.stock_value)}</td></tr>
+      `).join('');
+      summaryRows = `<div class="total-row outstanding"><span>Total Stock Value</span><span>${formatRs(totalStockValue)}</span></div>`;
     } else {
       title = `Monthly Purchase Report - ${year}`;
       bodyRows = monthly.filter(m => m.count > 0).map(m => `
@@ -111,13 +170,17 @@ export default function ReportsScreen() {
     const headers = tab === 'outstanding' ? '<tr><th>Supplier</th><th class="right">Purchase</th><th class="right">Paid</th><th class="right">Outstanding</th></tr>'
       : tab === 'purchases' ? '<tr><th>Date</th><th>Supplier</th><th>Invoice</th><th class="right">Amount</th></tr>'
       : tab === 'payments' ? '<tr><th>Date</th><th>Mode</th><th>Reference</th><th class="right">Amount</th></tr>'
+      : tab === 'sales' ? '<tr><th>Date</th><th>Invoice</th><th>Customer</th><th class="right">Total</th><th class="right">Received</th></tr>'
+      : tab === 'profit' ? '<tr><th>Date</th><th>Invoice</th><th>Customer</th><th class="right">Revenue</th><th class="right">Cost</th><th class="right">Profit</th></tr>'
+      : tab === 'custOutstanding' ? '<tr><th>Customer</th><th class="right">Purchase</th><th class="right">Paid</th><th class="right">Outstanding</th></tr>'
+      : tab === 'stock' ? '<tr><th>Product</th><th>Category</th><th class="center">Stock</th><th>Status</th><th class="right">Value</th></tr>'
       : '<tr><th>Month</th><th class="center">Count</th><th class="right">Total</th></tr>';
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${title}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #1a1c1e; }
   .doc { max-width: 700px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .header { background: linear-gradient(135deg, #006495, #00375F); color: #fff; padding: 24px; }
+  .header { background: linear-gradient(135deg, #1565C0, #0D47A1); color: #fff; padding: 24px; }
   .header h1 { margin: 0; font-size: 22px; }
   .header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
   .body { padding: 24px; }
@@ -127,8 +190,8 @@ export default function ReportsScreen() {
   td { font-size: 13px; color: #1a1c1e; }
   .totals { margin-left: auto; width: 300px; }
   .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-  .total-row.outstanding { border-top: 2px solid #006495; margin-top: 8px; padding-top: 12px; font-size: 18px; font-weight: 700; }
-  .footer { background: #006495; color: #fff; text-align: center; padding: 16px; font-size: 14px; }
+  .total-row.outstanding { border-top: 2px solid #1565C0; margin-top: 8px; padding-top: 12px; font-size: 18px; font-weight: 700; }
+  .footer { background: #1565C0; color: #fff; text-align: center; padding: 16px; font-size: 14px; }
   @media print { body { background: #fff; padding: 0; } .doc { box-shadow: none; } }
 </style></head><body>
   <div class="doc">
@@ -142,44 +205,58 @@ export default function ReportsScreen() {
 </body></html>`;
   };
 
+  const renderReportCard = (icon: any, iconColor: string, iconBg: string, title: string, meta: string, amount?: string, amountColor?: string, extraMeta?: string, index: number = 0) => {
+    const Icon = icon;
+    return (
+      <Animated.View key={index} entering={FadeInDown.duration(300).delay(index * 40)}>
+        <View style={styles.reportCard}>
+          <View style={[styles.reportIconWrap, { backgroundColor: iconBg }]}><Icon size={18} color={iconColor} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>{title}</Text>
+            <Text style={styles.reportMeta}>{meta}</Text>
+            {extraMeta ? <Text style={styles.reportMeta}>{extraMeta}</Text> : null}
+          </View>
+          {amount ? (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[styles.reportAmount, amountColor ? { color: amountColor } : null]}>{amount}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScreenHeader title="Reports" subtitle="Supplier & purchase analytics" />
 
-      <View style={styles.tabRow}>
-        {([
-          { key: 'outstanding', label: 'Sup Due', icon: AlertCircle },
-          { key: 'purchases', label: 'Purchases', icon: ClipboardList },
-          { key: 'payments', label: 'Payments', icon: Wallet },
-          { key: 'monthly', label: 'Monthly', icon: BarChart3 },
-          { key: 'sales', label: 'Sales', icon: TrendingUp },
-          { key: 'profit', label: 'Profit', icon: BarChart3 },
-          { key: 'custOutstanding', label: 'Cust Due', icon: AlertCircle },
-          { key: 'stock', label: 'Stock', icon: ClipboardList },
-        ] as const).map(t => {
+      {/* Tab chips - horizontally scrollable */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: MD3Spacing.lg, gap: MD3Spacing.xs, marginBottom: MD3Spacing.sm }}>
+        {TABS.map(t => {
           const Icon = t.icon;
+          const active = tab === t.key;
           return (
-            <TouchableOpacity key={t.key} style={[styles.tab, tab === t.key && styles.tabActive]} onPress={() => setTab(t.key)}>
-              <Icon size={16} color={tab === t.key ? MD3Colors.primary : MD3Colors.onSurfaceVariant} />
-              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            <TouchableOpacity key={t.key} style={[styles.tab, active && styles.tabActive]} onPress={() => setTab(t.key)}>
+              <Icon size={15} color={active ? MD3Colors.primary : MD3Colors.onSurfaceVariant} />
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
+      {/* Action bar */}
       <View style={styles.actionBar}>
-        {(tab === 'purchases' || tab === 'payments' || tab === 'sales' || tab === 'profit') && (
+        {hasDateFilter && (
           <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterModal(true)}>
             <Calendar size={16} color={MD3Colors.primary} />
             <Text style={styles.filterBtnText}>{startDate || endDate ? `${startDate || '...'} - ${endDate || '...'}` : 'Date Filter'}</Text>
+            {(startDate || endDate) && <View style={styles.filterDot} />}
           </TouchableOpacity>
         )}
         {tab === 'monthly' && (
-          <>
-            <View style={styles.yearWrap}>
-              <TextInput style={styles.yearInput} value={year} onChangeText={setYear} keyboardType="numeric" placeholder="Year" placeholderTextColor={MD3Colors.outline} />
-            </View>
-          </>
+          <View style={styles.yearWrap}>
+            <TextInput style={styles.yearInput} value={year} onChangeText={setYear} keyboardType="numeric" placeholder="Year" placeholderTextColor={MD3Colors.outline} />
+          </View>
         )}
         <TouchableOpacity style={styles.pdfBtn} onPress={() => setPdfModal(true)}>
           <FileText size={16} color={MD3Colors.onPrimary} />
@@ -188,206 +265,131 @@ export default function ReportsScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
-        {tab === 'outstanding' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Outstanding</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.error }]}>{formatRs(totalOutstanding)}</Text>
+        {/* Gradient summary banner */}
+        <Animated.View entering={FadeIn.duration(400)}>
+          <LinearGradient colors={summaryGradient as [string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryBanner}>
+            <View style={styles.summaryBannerContent}>
+              <Text style={styles.summaryLabel}>{summaryLabel}</Text>
+              <Text style={styles.summaryValue}>{formatRs(summaryValue)}</Text>
             </View>
-            {outstanding.length === 0 ? (
-              <Text style={styles.emptyText}>No outstanding balances. All suppliers are settled.</Text>
-            ) : (
-              outstanding.map((r, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><Truck size={18} color={MD3Colors.secondary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{r.supplier_name}</Text>
-                    <Text style={styles.reportMeta}>Purchase: {formatRs(r.total_purchase)} · Paid: {formatRs(r.total_paid)}</Text>
-                  </View>
-                  <Text style={[styles.reportAmount, { color: MD3Colors.error }]}>{formatRs(r.outstanding)}</Text>
-                </View>
-              ))
-            )}
-          </>
+            <View style={styles.summaryBannerIcon}>
+              {(() => { const I = currentTab.icon; return <I size={28} color="#FFFFFF" strokeWidth={1.8} />; })()}
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {tab === 'sales' && (
+          <Animated.View entering={FadeIn.duration(400).delay(100)}>
+            <View style={styles.subSummaryCard}>
+              <Text style={styles.subSummaryLabel}>Amount Received</Text>
+              <Text style={[styles.subSummaryValue, { color: MD3Colors.success }]}>{formatRs(totalReceived)}</Text>
+            </View>
+          </Animated.View>
+        )}
+
+        {tab === 'outstanding' && (
+          outstanding.length === 0 ? (
+            <EmptyState icon={<Truck size={48} color={MD3Colors.outline} />} title="No Outstanding" subtitle="All suppliers are settled" />
+          ) : (
+            outstanding.map((r, i) => renderReportCard(Truck, MD3Colors.secondary, MD3Colors.secondaryContainer, r.supplier_name, `Purchase: ${formatRs(r.total_purchase)} · Paid: ${formatRs(r.total_paid)}`, formatRs(r.outstanding), MD3Colors.error, undefined, i))
+          )
         )}
 
         {tab === 'purchases' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Purchases ({purchases.length})</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.primary }]}>{formatRs(totalPurchases)}</Text>
-            </View>
-            {purchases.length === 0 ? <Text style={styles.emptyText}>No purchases in this period.</Text> : (
-              purchases.map((p, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><ClipboardList size={18} color={MD3Colors.primary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{p.supplier_name}</Text>
-                    <Text style={styles.reportMeta}>{formatDate(p.date)} · {p.invoice_number || `#${p.id}`}</Text>
-                  </View>
-                  <Text style={styles.reportAmount}>{formatRs(p.grand_total || p.subtotal)}</Text>
-                </View>
-              ))
-            )}
-          </>
+          purchases.length === 0 ? (
+            <EmptyState icon={<ClipboardList size={48} color={MD3Colors.outline} />} title="No Purchases" subtitle="No purchases in this period" />
+          ) : (
+            purchases.map((p, i) => renderReportCard(ClipboardList, MD3Colors.primary, MD3Colors.primaryContainer, p.supplier_name, `${formatDate(p.date)} · ${p.invoice_number || `#${p.id}`}`, formatRs(p.grand_total || p.subtotal), undefined, undefined, i))
+          )
         )}
 
         {tab === 'payments' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Payments ({payments.length})</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.success }]}>{formatRs(totalPayments)}</Text>
-            </View>
-            {payments.length === 0 ? <Text style={styles.emptyText}>No payments in this period.</Text> : (
-              payments.map((p, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><Wallet size={18} color={MD3Colors.success} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{formatRs(p.amount)} · {p.payment_mode}</Text>
-                    <Text style={styles.reportMeta}>{formatDate(p.payment_date)}{p.transaction_number ? ` · ${p.transaction_number}` : ''}{p.cheque_number ? ` · Cheque: ${p.cheque_number}` : ''}</Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </>
+          payments.length === 0 ? (
+            <EmptyState icon={<Wallet size={48} color={MD3Colors.outline} />} title="No Payments" subtitle="No payments in this period" />
+          ) : (
+            payments.map((p, i) => renderReportCard(Wallet, MD3Colors.success, MD3Colors.successContainer, `${formatRs(p.amount)} · ${p.payment_mode}`, `${formatDate(p.payment_date)}${p.transaction_number ? ` · ${p.transaction_number}` : ''}${p.cheque_number ? ` · Cheque: ${p.cheque_number}` : ''}`, undefined, undefined, undefined, i))
+          )
         )}
 
         {tab === 'monthly' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Yearly Total ({year})</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.primary }]}>{formatRs(monthlyTotal)}</Text>
-            </View>
-            {monthly.filter(m => m.count > 0).length === 0 ? <Text style={styles.emptyText}>No purchases in {year}.</Text> : (
-              monthly.filter(m => m.count > 0).map((m, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><TrendingUp size={18} color={MD3Colors.tertiary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{MONTHS[m.month]} {year}</Text>
-                    <Text style={styles.reportMeta}>{m.count} purchases</Text>
-                  </View>
-                  <Text style={styles.reportAmount}>{formatRs(m.total)}</Text>
-                </View>
-              ))
-            )}
-          </>
+          monthly.filter(m => m.count > 0).length === 0 ? (
+            <EmptyState icon={<BarChart3 size={48} color={MD3Colors.outline} />} title="No Data" subtitle={`No purchases in ${year}`} />
+          ) : (
+            monthly.filter(m => m.count > 0).map((m, i) => renderReportCard(TrendingUp, MD3Colors.tertiary, MD3Colors.tertiaryContainer, `${MONTHS[m.month]} ${year}`, `${m.count} purchases`, formatRs(m.total), undefined, undefined, i))
+          )
         )}
 
         {tab === 'sales' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Sales ({sales.length})</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.primary }]}>{formatRs(totalSales)}</Text>
-            </View>
-            <Text style={styles.subSummary}>Received: {formatRs(totalReceived)}</Text>
-            {sales.length === 0 ? <Text style={styles.emptyText}>No sales in this period.</Text> : (
-              sales.map((s, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><TrendingUp size={18} color={MD3Colors.primary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{s.invoice_number || `#${s.id}`}</Text>
-                    <Text style={styles.reportMeta}>{s.customer_name} · {formatDate(s.date)} · {s.item_count} items</Text>
-                  </View>
-                  <Text style={styles.reportAmount}>{formatRs(s.grand_total)}</Text>
-                </View>
-              ))
-            )}
-          </>
+          sales.length === 0 ? (
+            <EmptyState icon={<TrendingUp size={48} color={MD3Colors.outline} />} title="No Sales" subtitle="No sales in this period" />
+          ) : (
+            sales.map((s, i) => renderReportCard(TrendingUp, MD3Colors.primary, MD3Colors.primaryContainer, s.invoice_number || `#${s.id}`, `${s.customer_name} · ${formatDate(s.date)} · ${s.item_count} items`, formatRs(s.grand_total), undefined, undefined, i))
+          )
         )}
 
         {tab === 'profit' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Profit ({profit.length})</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.success }]}>{formatRs(totalProfit)}</Text>
-            </View>
-            {profit.length === 0 ? <Text style={styles.emptyText}>No sales in this period.</Text> : (
-              profit.map((p, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><BarChart3 size={18} color={MD3Colors.success} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{p.invoice_number || 'Sale'}</Text>
-                    <Text style={styles.reportMeta}>{p.customer_name} · {formatDate(p.date)}</Text>
-                    <Text style={styles.reportMeta}>Revenue: {formatRs(p.revenue)} · Cost: {formatRs(p.cost)}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.reportAmount, p.profit >= 0 ? { color: MD3Colors.success } : { color: MD3Colors.error }]}>{formatRs(p.profit)}</Text>
-                    <Text style={styles.reportMeta}>{p.margin.toFixed(1)}% margin</Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </>
+          profit.length === 0 ? (
+            <EmptyState icon={<BarChart3 size={48} color={MD3Colors.outline} />} title="No Data" subtitle="No sales in this period" />
+          ) : (
+            profit.map((p, i) => renderReportCard(BarChart3, MD3Colors.success, MD3Colors.successContainer, p.invoice_number || 'Sale', `${p.customer_name} · ${formatDate(p.date)}`, formatRs(p.profit), p.profit >= 0 ? MD3Colors.success : MD3Colors.error, `Revenue: ${formatRs(p.revenue)} · Cost: ${formatRs(p.cost)} · ${p.margin.toFixed(1)}% margin`, i))
+          )
         )}
 
         {tab === 'custOutstanding' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Customer Due</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.error }]}>{formatRs(totalCustOutstanding)}</Text>
-            </View>
-            {custOutstanding.length === 0 ? <Text style={styles.emptyText}>No outstanding customer balances.</Text> : (
-              custOutstanding.map((c, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><AlertCircle size={18} color={MD3Colors.error} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{c.customer_name}</Text>
-                    <Text style={styles.reportMeta}>{c.phone || 'No phone'} · Purchase: {formatRs(c.total_purchase)} · Paid: {formatRs(c.total_paid)}</Text>
-                  </View>
-                  <Text style={[styles.reportAmount, { color: MD3Colors.error }]}>{formatRs(c.outstanding)}</Text>
-                </View>
-              ))
-            )}
-          </>
+          custOutstanding.length === 0 ? (
+            <EmptyState icon={<AlertCircle size={48} color={MD3Colors.outline} />} title="No Outstanding" subtitle="No outstanding customer balances" />
+          ) : (
+            custOutstanding.map((c, i) => renderReportCard(AlertCircle, MD3Colors.error, MD3Colors.errorContainer, c.customer_name, `${c.phone || 'No phone'} · Purchase: ${formatRs(c.total_purchase)} · Paid: ${formatRs(c.total_paid)}`, formatRs(c.outstanding), MD3Colors.error, undefined, i))
+          )
         )}
 
         {tab === 'stock' && (
-          <>
-            <View style={styles.summaryBanner}>
-              <Text style={styles.summaryLabel}>Total Stock Value</Text>
-              <Text style={[styles.summaryValue, { color: MD3Colors.primary }]}>{formatRs(totalStockValue)}</Text>
-            </View>
-            {stockReport.length === 0 ? <Text style={styles.emptyText}>No products found.</Text> : (
-              stockReport.map((s, i) => (
-                <View key={i} style={styles.reportCard}>
-                  <View style={styles.reportIconWrap}><ClipboardList size={18} color={MD3Colors.primary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reportTitle}>{s.name}</Text>
-                    <Text style={styles.reportMeta}>{s.category_name}{s.design_number ? ` · ${s.design_number}` : ''} · {s.total_stock} {s.unit}</Text>
-                    <Text style={[styles.reportMeta, { color: s.status === 'Out of Stock' ? MD3Colors.error : s.status === 'Low Stock' ? MD3Colors.warning : MD3Colors.success }]}>{s.status}</Text>
+          stockReport.length === 0 ? (
+            <EmptyState icon={<Package size={48} color={MD3Colors.outline} />} title="No Products" subtitle="No products found" />
+          ) : (
+            stockReport.map((s, i) => {
+              const statusColor = s.status === 'Out of Stock' ? MD3Colors.error : s.status === 'Low Stock' ? MD3Colors.warning : MD3Colors.success;
+              const statusBg = s.status === 'Out of Stock' ? MD3Colors.errorContainer : s.status === 'Low Stock' ? MD3Colors.warningContainer : MD3Colors.successContainer;
+              return (
+                <Animated.View key={i} entering={FadeInDown.duration(300).delay(i * 40)}>
+                  <View style={styles.reportCard}>
+                    <View style={[styles.reportIconWrap, { backgroundColor: MD3Colors.primaryContainer }]}><Package size={18} color={MD3Colors.primary} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reportTitle}>{s.name}</Text>
+                      <Text style={styles.reportMeta}>{s.category_name}{s.design_number ? ` · ${s.design_number}` : ''} · {s.total_stock} {s.unit}</Text>
+                      <View style={{ marginTop: 4 }}><StatusBadge label={s.status} color={statusColor} bg={statusBg} /></View>
+                    </View>
+                    <Text style={styles.reportAmount}>{formatRs(s.stock_value)}</Text>
                   </View>
-                  <Text style={styles.reportAmount}>{formatRs(s.stock_value)}</Text>
-                </View>
-              ))
-            )}
-          </>
+                </Animated.View>
+              );
+            })
+          )
         )}
       </ScrollView>
 
-      <Modal visible={filterModal} animationType="slide" transparent onRequestClose={() => setFilterModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Date Filter</Text>
-              <TouchableOpacity onPress={() => setFilterModal(false)}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
-            </View>
-            <View style={styles.modalBody}>
-              <Input label="Start Date" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
-              <Input label="End Date" value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" />
-              <View style={{ flexDirection: 'row', marginTop: MD3Spacing.sm }}>
-                <Button title="Clear" variant="outlined" onPress={() => { setStartDate(''); setEndDate(''); }} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-                <Button title="Apply" onPress={() => { setFilterModal(false); load(); }} style={{ flex: 1 }} />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Date Filter Modal */}
+      <PremiumModal
+        visible={filterModal}
+        onClose={() => setFilterModal(false)}
+        title="Date Filter"
+        footer={
+          <>
+            <Button title="Clear" intent="cancel" variant="outlined" onPress={() => { setStartDate(''); setEndDate(''); }} style={{ flex: 1 }} />
+            <Button title="Apply" intent="primary" onPress={() => { setFilterModal(false); load(); }} style={{ flex: 1 }} />
+          </>
+        }
+      >
+        <Input label="Start Date" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
+        <Input label="End Date" value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" />
+      </PremiumModal>
 
+      {/* PDF Modal */}
       <Modal visible={pdfModal} animationType="slide" onRequestClose={() => setPdfModal(false)}>
         <View style={styles.pdfContainer}>
           <View style={styles.pdfToolbar}>
             <Text style={styles.pdfTitle}>Report PDF</Text>
-            <TouchableOpacity onPress={() => setPdfModal(false)}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setPdfModal(false)} style={styles.pdfCloseBtn}><X size={22} color={MD3Colors.onSurface} /></TouchableOpacity>
           </View>
           <View style={styles.pdfWebviewWrap}>
             <WebView ref={webViewRef} source={{ html: generateReportHTML() }} style={{ flex: 1 }} originWhitelist={['*']} />
@@ -403,37 +405,87 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  tabRow: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.sm, gap: MD3Spacing.xs },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.sm, backgroundColor: MD3Colors.surface, ...MD3Elevation.level1 },
+  tab: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: MD3Spacing.sm, paddingHorizontal: MD3Spacing.md,
+    borderRadius: MD3Radius.full,
+    backgroundColor: MD3Colors.surface,
+    ...MD3Elevation.level1,
+  },
   tabActive: { backgroundColor: MD3Colors.primaryContainer },
   tabText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant },
   tabTextActive: { color: MD3Colors.primary },
   actionBar: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.sm, gap: MD3Spacing.sm },
-  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, ...MD3Elevation.level1 },
+  filterBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, position: 'relative',
+    backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.full,
+    paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm,
+    ...MD3Elevation.level1,
+  },
   filterBtnText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.primary },
+  filterDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: MD3Colors.error },
   yearWrap: { flex: 1 },
-  yearInput: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, fontSize: 14, fontFamily: 'Roboto-Regular', color: MD3Colors.onSurface, backgroundColor: MD3Colors.surface, width: 100 },
-  pdfBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, marginLeft: 'auto' },
+  yearInput: {
+    borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md,
+    paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm,
+    fontSize: 14, fontFamily: 'Roboto-Regular', color: MD3Colors.onSurface,
+    backgroundColor: MD3Colors.surface, width: 120,
+  },
+  pdfBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto',
+    backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.full,
+    paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm,
+    ...MD3Elevation.level2,
+  },
   pdfBtnText: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.onPrimary },
-  summaryBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.md },
-  summaryLabel: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurfaceVariant },
-  summaryValue: { fontFamily: 'Roboto-Bold', fontSize: 18 },
-  reportCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.sm, ...MD3Elevation.level1 },
-  reportIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.sm },
-  reportTitle: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface, marginBottom: 2 },
-  reportMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant },
+  summaryBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: MD3Radius.lg, padding: MD3Spacing.lg, marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level3,
+  },
+  summaryBannerContent: { flex: 1 },
+  summaryLabel: { fontFamily: 'Roboto-Regular', fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
+  summaryValue: { fontFamily: 'Roboto-Bold', fontSize: 24, color: '#FFFFFF' },
+  summaryBannerIcon: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  subSummaryCard: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md, marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level2,
+  },
+  subSummaryLabel: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurfaceVariant },
+  subSummaryValue: { fontFamily: 'Roboto-Bold', fontSize: 16 },
+  reportCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md, marginBottom: MD3Spacing.sm,
+    ...MD3Elevation.level2,
+  },
+  reportIconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md,
+  },
+  reportTitle: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface, marginBottom: 3 },
+  reportMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 1 },
   reportAmount: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface },
-  emptyText: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant, textAlign: 'center', padding: MD3Spacing.xl },
-  subSummary: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.md, marginLeft: MD3Spacing.xs },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xl, borderTopRightRadius: MD3Radius.xl },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: MD3Spacing.lg, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
-  modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
-  modalBody: { padding: MD3Spacing.lg },
   pdfContainer: { flex: 1, backgroundColor: MD3Colors.background },
-  pdfToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, backgroundColor: MD3Colors.surface, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
+  pdfToolbar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md,
+    backgroundColor: MD3Colors.surface,
+    borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant,
+  },
   pdfTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, flex: 1 },
-  pdfWebviewWrap: { flex: 1, margin: MD3Spacing.sm, borderRadius: MD3Radius.md, overflow: 'hidden', ...MD3Elevation.level1 },
-  pdfPrintBtn: { backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, marginHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.lg, alignItems: 'center' },
+  pdfCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center' },
+  pdfWebviewWrap: { flex: 1, margin: MD3Spacing.sm, borderRadius: MD3Radius.lg, overflow: 'hidden', ...MD3Elevation.level2 },
+  pdfPrintBtn: {
+    backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.lg,
+    paddingVertical: MD3Spacing.md, marginHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.lg,
+    alignItems: 'center', ...MD3Elevation.level2,
+  },
   pdfPrintText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onPrimary },
 });

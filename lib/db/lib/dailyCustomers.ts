@@ -1,4 +1,4 @@
-import { getDb } from "./database";
+import { getDb } from "../database";
 
 export async function addDailyCustomer(data: {
   customer_name: string;

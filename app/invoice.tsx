@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Platform } from 'react-native';
+import { useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Platform } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { FileText, Share2, ArrowLeft, Printer, X } from 'lucide-react-native';
+import { FileText, Share2, ArrowLeft, Printer } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getSaleById, getSettings, SaleHeaderWithDetails, ShopSettings } from '@/lib/db/repo';
 import { ScreenHeader, EmptyState } from '@/components/ui';
 import { WebView } from 'react-native-webview';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function InvoiceScreen() {
   const router = useRouter();
@@ -151,7 +153,6 @@ export default function InvoiceScreen() {
 
   const handleShare = async () => {
     if (Platform.OS === 'web') {
-      // On web, open print dialog
       handlePrint();
     } else {
       try {
@@ -177,7 +178,11 @@ export default function InvoiceScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="PDF Invoice" subtitle="Loading..." />
-        <View style={styles.loading}><Text style={styles.loadingText}>Generating invoice...</Text></View>
+        <View style={styles.loadingWrap}>
+          <Animated.View entering={FadeIn.duration(400)} style={styles.loadingCard}>
+            <Text style={styles.loadingText}>Generating invoice...</Text>
+          </Animated.View>
+        </View>
       </View>
     );
   }
@@ -185,39 +190,81 @@ export default function InvoiceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.toolbarBtn}>
-          <ArrowLeft size={20} color={MD3Colors.onSurface} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.toolbarBackBtn}>
+          <ArrowLeft size={22} color={MD3Colors.onSurface} strokeWidth={2.2} />
         </TouchableOpacity>
         <Text style={styles.toolbarTitle}>Invoice {sale.invoice_number}</Text>
         <View style={styles.toolbarActions}>
-          <TouchableOpacity onPress={handlePrint} style={styles.toolbarBtn}>
-            <Printer size={20} color={MD3Colors.primary} />
+          <TouchableOpacity onPress={handlePrint} style={styles.toolbarActionBtn}>
+            <Printer size={20} color={MD3Colors.primary} strokeWidth={2.2} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={styles.toolbarBtn}>
-            <Share2 size={20} color={MD3Colors.primary} />
+          <TouchableOpacity onPress={handleShare} style={styles.toolbarActionBtn}>
+            <Share2 size={20} color={MD3Colors.primary} strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.webviewWrap}>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.webviewWrap}>
         <WebView
           ref={webViewRef}
           source={{ html: generateHTML() }}
           style={styles.webview}
           originWhitelist={['*']}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, backgroundColor: MD3Colors.surface, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
-  toolbarBtn: { padding: MD3Spacing.sm },
-  toolbarTitle: { flex: 1, fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginLeft: MD3Spacing.sm },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: MD3Spacing.md,
+    paddingVertical: MD3Spacing.sm,
+    backgroundColor: MD3Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: MD3Colors.outlineVariant,
+    ...MD3Elevation.level1,
+  },
+  toolbarBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: MD3Colors.surfaceVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toolbarTitle: {
+    flex: 1,
+    fontFamily: 'Roboto-Bold',
+    fontSize: 16,
+    color: MD3Colors.onSurface,
+    marginLeft: MD3Spacing.sm,
+  },
   toolbarActions: { flexDirection: 'row', gap: MD3Spacing.xs },
-  webviewWrap: { flex: 1, margin: MD3Spacing.sm, borderRadius: MD3Radius.md, overflow: 'hidden', ...MD3Elevation.level1 },
+  toolbarActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: MD3Colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webviewWrap: {
+    flex: 1,
+    margin: MD3Spacing.sm,
+    borderRadius: MD3Radius.lg,
+    overflow: 'hidden',
+    ...MD3Elevation.level2,
+  },
   webview: { flex: 1, backgroundColor: '#f5f5f5' },
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: MD3Spacing.lg },
+  loadingCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.xl,
+    ...MD3Elevation.level2,
+  },
+  loadingText: { fontFamily: 'Roboto-Regular', fontSize: 15, color: MD3Colors.onSurfaceVariant },
 });

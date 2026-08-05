@@ -12,14 +12,23 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: MD3Colors.surface,
           borderTopColor: MD3Colors.outlineVariant,
-          height: 60,
-          paddingBottom: 6,
-          paddingTop: 6,
+          borderTopWidth: 1,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 10,
         },
         tabBarLabelStyle: {
           fontFamily: 'Roboto-Medium',
           fontSize: 11,
+          fontWeight: '600',
+          marginTop: 2,
         },
+        tabBarIconStyle: { marginTop: 0 },
       }}
     >
       <Tabs.Screen
@@ -27,7 +36,7 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ size, color }) => (
-            <LayoutDashboard size={size} color={color} />
+            <LayoutDashboard size={size} color={color} strokeWidth={2.2} />
           ),
         }}
       />
@@ -36,7 +45,7 @@ export default function TabLayout() {
         options={{
           title: 'Products',
           tabBarIcon: ({ size, color }) => (
-            <Package size={size} color={color} />
+            <Package size={size} color={color} strokeWidth={2.2} />
           ),
         }}
       />
@@ -45,7 +54,7 @@ export default function TabLayout() {
         options={{
           title: 'Sales',
           tabBarIcon: ({ size, color }) => (
-            <ShoppingCart size={size} color={color} />
+            <ShoppingCart size={size} color={color} strokeWidth={2.2} />
           ),
         }}
       />
@@ -54,7 +63,7 @@ export default function TabLayout() {
         options={{
           title: 'More',
           tabBarIcon: ({ size, color }) => (
-            <LayoutGrid size={size} color={color} />
+            <LayoutGrid size={size} color={color} strokeWidth={2.2} />
           ),
         }}
       />

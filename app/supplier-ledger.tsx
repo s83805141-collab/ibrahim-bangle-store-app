@@ -1,17 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Share, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView, Alert, TextInput, Modal } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { BookOpen, Plus, ArrowDownLeft, ArrowUpRight, Trash2, X, Truck, Wallet, Search, FileText, Filter, ChevronDown } from 'lucide-react-native';
+import { BookOpen, ArrowDownLeft, ArrowUpRight, Trash2, X, Truck, Wallet, Search, FileText, Filter, ChevronLeft } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
-  getAllSuppliersFull, getSupplierById, getSupplierLedgerEntries, getSupplierLedgerTotals,
+  getAllSuppliersFull, getSupplierLedgerEntries, getSupplierLedgerTotals,
   getPurchasesBySupplier, addSupplierPayment, deleteLedgerEntry,
-  getFilteredSupplierLedgerEntries, getLatestSupplierTransaction,
+  getFilteredSupplierLedgerEntries,
   SupplierWithStats, LedgerEntry, PurchaseHeaderWithDetails, PAYMENT_METHODS,
 } from '@/lib/db/repo';
 import type { PaymentMethod } from '@/lib/db/schema';
-import { Button, Input, EmptyState, ScreenHeader } from '@/components/ui';
+import { Button, Input, EmptyState, ScreenHeader, FAB, PremiumModal, StatusBadge } from '@/components/ui';
 import { WebView } from 'react-native-webview';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Cheque'] as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -115,7 +117,7 @@ export default function SupplierLedgerScreen() {
   * { box-sizing: border-box; }
   body { font-family: 'Roboto', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #1a1c1e; }
   .doc { max-width: 700px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .header { background: linear-gradient(135deg, #006495, #00375F); color: #fff; padding: 24px; }
+  .header { background: linear-gradient(135deg, #1565C0, #0D47A1); color: #fff; padding: 24px; }
   .header h1 { margin: 0; font-size: 22px; }
   .header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
   .body { padding: 24px; }
@@ -127,8 +129,8 @@ export default function SupplierLedgerScreen() {
   td { font-size: 13px; color: #1a1c1e; }
   .totals { margin-left: auto; width: 300px; }
   .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-  .total-row.outstanding { border-top: 2px solid #006495; margin-top: 8px; padding-top: 12px; font-size: 18px; font-weight: 700; }
-  .footer { background: #006495; color: #fff; text-align: center; padding: 16px; font-size: 14px; }
+  .total-row.outstanding { border-top: 2px solid #1565C0; margin-top: 8px; padding-top: 12px; font-size: 18px; font-weight: 700; }
+  .footer { background: #1565C0; color: #fff; text-align: center; padding: 16px; font-size: 14px; }
   @media print { body { background: #fff; padding: 0; } .doc { box-shadow: none; } }
 </style></head><body>
   <div class="doc">
@@ -164,17 +166,21 @@ export default function SupplierLedgerScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSuppliers} />}
           contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
           ListEmptyComponent={<EmptyState icon={<BookOpen size={48} color={MD3Colors.outline} />} title="No suppliers" subtitle="Add suppliers to view their ledger" />}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.supplierCard} onPress={() => selectSupplier(item)}>
-              <View style={styles.supplierIcon}><Truck size={20} color={MD3Colors.secondary} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.supplierName}>{item.name}</Text>
-                <Text style={styles.supplierMeta}>{formatRs(item.total_purchase)} purchased · {formatRs(item.remaining_balance)} balance</Text>
-              </View>
-              {item.remaining_balance > 0 ? (
-                <View style={styles.dueBadge}><Text style={styles.dueText}>{formatRs(item.remaining_balance)}</Text></View>
-              ) : null}
-            </TouchableOpacity>
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.duration(300).delay(index * 50)}>
+              <TouchableOpacity style={styles.supplierCard} onPress={() => selectSupplier(item)} activeOpacity={0.85}>
+                <View style={styles.supplierIcon}><Truck size={20} color={MD3Colors.secondary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.supplierName}>{item.name}</Text>
+                  <Text style={styles.supplierMeta}>{formatRs(item.total_purchase)} purchased · {formatRs(item.remaining_balance)} balance</Text>
+                </View>
+                {item.remaining_balance > 0 ? (
+                  <StatusBadge label={formatRs(item.remaining_balance)} color={MD3Colors.error} bg={MD3Colors.errorContainer} />
+                ) : (
+                  <StatusBadge label="Settled" color={MD3Colors.success} bg={MD3Colors.successContainer} />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
           )}
         />
       </View>
@@ -186,25 +192,27 @@ export default function SupplierLedgerScreen() {
       <ScreenHeader title={selectedSupplier.name} subtitle="Supplier Ledger" />
 
       <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: MD3Colors.primaryContainer }]}>
+        <Animated.View entering={FadeIn.duration(300)} style={[styles.summaryCard, { backgroundColor: MD3Colors.primaryContainer }]}>
           <Text style={styles.summaryCardLabel}>Total Purchase</Text>
           <Text style={[styles.summaryCardValue, { color: MD3Colors.primary }]}>{formatRs(selectedSupplier.total_purchase)}</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: MD3Colors.successContainer }]}>
+        </Animated.View>
+        <Animated.View entering={FadeIn.duration(300).delay(80)} style={[styles.summaryCard, { backgroundColor: MD3Colors.successContainer }]}>
           <Text style={styles.summaryCardLabel}>Total Paid</Text>
           <Text style={[styles.summaryCardValue, { color: MD3Colors.success }]}>{formatRs(selectedSupplier.total_paid)}</Text>
-        </View>
-        <View style={[styles.summaryCard, selectedSupplier.remaining_balance > 0 ? { backgroundColor: MD3Colors.errorContainer } : { backgroundColor: MD3Colors.surfaceVariant }]}>
+        </Animated.View>
+        <Animated.View entering={FadeIn.duration(300).delay(160)} style={[styles.summaryCard, selectedSupplier.remaining_balance > 0 ? { backgroundColor: MD3Colors.errorContainer } : { backgroundColor: MD3Colors.surfaceVariant }]}>
           <Text style={styles.summaryCardLabel}>Balance</Text>
           <Text style={[styles.summaryCardValue, selectedSupplier.remaining_balance > 0 ? { color: MD3Colors.error } : { color: MD3Colors.onSurface }]}>{formatRs(selectedSupplier.remaining_balance)}</Text>
-        </View>
+        </Animated.View>
       </View>
 
       <View style={styles.tabRow}>
         <TouchableOpacity style={[styles.tab, activeTab === 'ledger' && styles.tabActive]} onPress={() => setActiveTab('ledger')}>
+          <Wallet size={16} color={activeTab === 'ledger' ? MD3Colors.primary : MD3Colors.onSurfaceVariant} />
           <Text style={[styles.tabText, activeTab === 'ledger' && styles.tabTextActive]}>Payment History</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tab, activeTab === 'purchases' && styles.tabActive]} onPress={() => setActiveTab('purchases')}>
+          <BookOpen size={16} color={activeTab === 'purchases' ? MD3Colors.primary : MD3Colors.onSurfaceVariant} />
           <Text style={[styles.tabText, activeTab === 'purchases' && styles.tabTextActive]}>Purchase History</Text>
         </TouchableOpacity>
       </View>
@@ -227,59 +235,62 @@ export default function SupplierLedgerScreen() {
 
       <FlatList
         data={(activeTab === 'ledger' ? ledgerEntries : purchases) as any[]}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item: any) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={() => selectedSupplier && selectSupplier(selectedSupplier)} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}
         ListEmptyComponent={<EmptyState icon={<BookOpen size={48} color={MD3Colors.outline} />} title={activeTab === 'ledger' ? 'No ledger entries' : 'No purchases'} />}
-        renderItem={({ item }) => activeTab === 'ledger' ? (
-          <View style={styles.ledgerCard}>
-            <View style={[styles.ledgerIcon, item.type === 'payment' ? { backgroundColor: MD3Colors.successContainer } : { backgroundColor: MD3Colors.errorContainer }]}>
-              {item.type === 'payment' ? <ArrowUpRight size={18} color={MD3Colors.success} /> : <ArrowDownLeft size={18} color={MD3Colors.error} />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.ledgerNote}>{item.note || (item.type === 'payment' ? 'Payment' : 'Purchase/Opening')}</Text>
-              <Text style={styles.ledgerDate}>{formatDate(item.date)}{item.payment_method ? ` · ${item.payment_method}` : ''}{item.transaction_number ? ` · ${item.transaction_number}` : ''}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.ledgerAmount, item.type === 'payment' ? { color: MD3Colors.success } : { color: MD3Colors.error }]}>
-                {item.type === 'payment' ? '-' : '+'}{formatRs(item.amount)}
-              </Text>
-              {item.running_balance !== undefined && (
-                <Text style={styles.runningBalance}>Bal: {formatRs(item.running_balance)}</Text>
-              )}
-            </View>
-            {item.ref_type === 'manual_payment' ? (
-              <TouchableOpacity onPress={() => handleDeleteEntry(item)} style={styles.ledgerDelete}><Trash2 size={14} color={MD3Colors.error} /></TouchableOpacity>
-            ) : null}
-          </View>
-        ) : (
-          <View style={styles.purchaseCard}>
-            <View style={styles.purchaseHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.purchaseInvoice}>{item.invoice_number || `Purchase #${item.id}`}</Text>
-                <Text style={styles.purchaseDate}>{formatDate(item.date)} · {item.items.length} items</Text>
+        renderItem={({ item, index }: { item: any; index: number }) => activeTab === 'ledger' ? (
+          <Animated.View entering={FadeInDown.duration(300).delay(index * 40)}>
+            <View style={styles.ledgerCard}>
+              <View style={[styles.ledgerIcon, item.type === 'payment' ? { backgroundColor: MD3Colors.successContainer } : { backgroundColor: MD3Colors.errorContainer }]}>
+                {item.type === 'payment' ? <ArrowUpRight size={18} color={MD3Colors.success} /> : <ArrowDownLeft size={18} color={MD3Colors.error} />}
               </View>
-              <Text style={styles.purchaseAmount}>{formatRs(item.grand_total || item.subtotal)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ledgerNote}>{item.note || (item.type === 'payment' ? 'Payment' : 'Purchase/Opening')}</Text>
+                <Text style={styles.ledgerDate}>{formatDate(item.date)}{item.payment_method ? ` · ${item.payment_method}` : ''}{item.transaction_number ? ` · ${item.transaction_number}` : ''}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.ledgerAmount, item.type === 'payment' ? { color: MD3Colors.success } : { color: MD3Colors.error }]}>
+                  {item.type === 'payment' ? '-' : '+'}{formatRs(item.amount)}
+                </Text>
+                {item.running_balance !== undefined && (
+                  <Text style={styles.runningBalance}>Bal: {formatRs(item.running_balance)}</Text>
+                )}
+              </View>
+              {item.ref_type === 'manual_payment' ? (
+                <TouchableOpacity onPress={() => handleDeleteEntry(item)} style={styles.ledgerDelete}><Trash2 size={16} color={MD3Colors.error} /></TouchableOpacity>
+              ) : null}
             </View>
-            <View style={styles.purchaseItems}>
-              {item.items.map((pi: any, i: number) => (
-                <Text key={i} style={styles.purchaseItemText}>• {pi.product_name} ({pi.quantity} {pi.unit} × {formatRs(pi.unit_price)})</Text>
-              ))}
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeInDown.duration(300).delay(index * 40)}>
+            <View style={styles.purchaseCard}>
+              <View style={styles.purchaseHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.purchaseInvoice}>{item.invoice_number || `Purchase #${item.id}`}</Text>
+                  <Text style={styles.purchaseDate}>{formatDate(item.date)} · {item.items.length} items</Text>
+                </View>
+                <Text style={styles.purchaseAmount}>{formatRs(item.grand_total || item.subtotal)}</Text>
+              </View>
+              <View style={styles.purchaseItems}>
+                {item.items.map((pi: any, i: number) => (
+                  <Text key={i} style={styles.purchaseItemText}>• {pi.product_name} ({pi.quantity} {pi.unit} × {formatRs(pi.unit_price)})</Text>
+                ))}
+              </View>
+              <View style={styles.purchaseFooter}>
+                <StatusBadge label={`Paid ${formatRs(item.amount_paid)}`} color={MD3Colors.success} bg={MD3Colors.successContainer} />
+                {item.remaining_balance > 0 ? <StatusBadge label={`Bal ${formatRs(item.remaining_balance)}`} color={MD3Colors.error} bg={MD3Colors.errorContainer} /> : null}
+                {item.payments && item.payments.length > 0 && <StatusBadge label={`${item.payments.length} payments`} color={MD3Colors.primary} bg={MD3Colors.primaryContainer} />}
+              </View>
             </View>
-            <View style={styles.purchaseFooter}>
-              <Text style={styles.purchasePaidText}>Paid {formatRs(item.amount_paid)}</Text>
-              {item.remaining_balance > 0 ? <Text style={styles.purchaseBalText}>Bal {formatRs(item.remaining_balance)}</Text> : null}
-              {item.payments && item.payments.length > 0 && <Text style={styles.purchasePayText}>{item.payments.length} payments</Text>}
-            </View>
-          </View>
+          </Animated.View>
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setPaymentModalVisible(true)}>
-        <Wallet size={26} color={MD3Colors.onPrimary} />
-      </TouchableOpacity>
+      <FAB onPress={() => setPaymentModalVisible(true)} icon={Wallet} intent="payment" />
 
       <TouchableOpacity style={styles.backBtn} onPress={() => { setSelectedSupplier(null); setLedgerEntries([]); setPurchases([]); }}>
+        <ChevronLeft size={18} color={MD3Colors.primary} strokeWidth={2.2} />
         <Text style={styles.backText}>All Suppliers</Text>
       </TouchableOpacity>
 
@@ -290,51 +301,47 @@ export default function SupplierLedgerScreen() {
         onSaved={() => { setPaymentModalVisible(false); selectSupplier(selectedSupplier); }}
       />
 
-      <Modal visible={filterModalVisible} animationType="slide" transparent onRequestClose={() => setFilterModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Ledger</Text>
-              <TouchableOpacity onPress={() => setFilterModalVisible(false)}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
-              <Text style={styles.fieldLabel}>Month</Text>
-              <View style={styles.chipRow}>
-                <TouchableOpacity style={[styles.chip, filterMonth === null && styles.chipSelected]} onPress={() => setFilterMonth(null)}>
-                  <Text style={[styles.chipText, filterMonth === null && styles.chipTextSelected]}>All</Text>
-                </TouchableOpacity>
-                {MONTHS.map((m, i) => (
-                  <TouchableOpacity key={i} style={[styles.chip, filterMonth === i && styles.chipSelected]} onPress={() => setFilterMonth(i)}>
-                    <Text style={[styles.chipText, filterMonth === i && styles.chipTextSelected]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Input label="Year" value={filterYear} onChangeText={setFilterYear} placeholder="e.g. 2026" keyboardType="numeric" />
-              <Text style={styles.fieldLabel}>Payment Mode</Text>
-              <View style={styles.chipRow}>
-                <TouchableOpacity style={[styles.chip, !filterPaymentMode && styles.chipSelected]} onPress={() => setFilterPaymentMode('')}>
-                  <Text style={[styles.chipText, !filterPaymentMode && styles.chipTextSelected]}>All</Text>
-                </TouchableOpacity>
-                {PAYMENT_MODES.map(m => (
-                  <TouchableOpacity key={m} style={[styles.chip, filterPaymentMode === m && styles.chipSelected]} onPress={() => setFilterPaymentMode(m)}>
-                    <Text style={[styles.chipText, filterPaymentMode === m && styles.chipTextSelected]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-            <View style={styles.modalFooter}>
-              <Button title="Clear" variant="outlined" onPress={clearFilters} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-              <Button title="Apply Filters" onPress={applyFilters} style={{ flex: 1 }} />
-            </View>
-          </View>
+      <PremiumModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        title="Filter Ledger"
+        footer={
+          <>
+            <Button title="Clear" intent="cancel" variant="outlined" onPress={clearFilters} style={{ flex: 1 }} />
+            <Button title="Apply Filters" intent="search" onPress={applyFilters} style={{ flex: 1 }} />
+          </>
+        }
+      >
+        <Text style={styles.fieldLabel}>Month</Text>
+        <View style={styles.chipRow}>
+          <TouchableOpacity style={[styles.chip, filterMonth === null && styles.chipSelected]} onPress={() => setFilterMonth(null)}>
+            <Text style={[styles.chipText, filterMonth === null && styles.chipTextSelected]}>All</Text>
+          </TouchableOpacity>
+          {MONTHS.map((m, i) => (
+            <TouchableOpacity key={i} style={[styles.chip, filterMonth === i && styles.chipSelected]} onPress={() => setFilterMonth(i)}>
+              <Text style={[styles.chipText, filterMonth === i && styles.chipTextSelected]}>{m}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
+        <Input label="Year" value={filterYear} onChangeText={setFilterYear} placeholder="e.g. 2026" keyboardType="numeric" />
+        <Text style={styles.fieldLabel}>Payment Mode</Text>
+        <View style={styles.chipRow}>
+          <TouchableOpacity style={[styles.chip, !filterPaymentMode && styles.chipSelected]} onPress={() => setFilterPaymentMode('')}>
+            <Text style={[styles.chipText, !filterPaymentMode && styles.chipTextSelected]}>All</Text>
+          </TouchableOpacity>
+          {PAYMENT_MODES.map(m => (
+            <TouchableOpacity key={m} style={[styles.chip, filterPaymentMode === m && styles.chipSelected]} onPress={() => setFilterPaymentMode(m)}>
+              <Text style={[styles.chipText, filterPaymentMode === m && styles.chipTextSelected]}>{m}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </PremiumModal>
 
       <Modal visible={pdfModalVisible} animationType="slide" onRequestClose={() => setPdfModalVisible(false)}>
         <View style={styles.pdfContainer}>
           <View style={styles.pdfToolbar}>
             <Text style={styles.pdfTitle}>Ledger PDF - {selectedSupplier.name}</Text>
-            <TouchableOpacity onPress={() => setPdfModalVisible(false)}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setPdfModalVisible(false)} style={styles.pdfCloseBtn}><X size={22} color={MD3Colors.onSurface} /></TouchableOpacity>
           </View>
           <View style={styles.pdfWebviewWrap}>
             <WebView ref={webViewRef} source={{ html: generateLedgerHTML() }} style={{ flex: 1 }} originWhitelist={['*']} />
@@ -378,98 +385,148 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Payment</Text>
-            <TouchableOpacity onPress={onClose}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
-            <Input label="Amount (Rs) *" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="0" />
-            <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-            <Text style={styles.fieldLabel}>Payment Method</Text>
-            <View style={styles.chipRow}>
-              {PAYMENT_METHODS.map(m => (
-                <TouchableOpacity key={m} style={[styles.chip, method === m && styles.chipSelected]} onPress={() => setMethod(m)}>
-                  <Text style={[styles.chipText, method === m && styles.chipTextSelected]}>{m}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Input label="Transaction Number" value={txnNumber} onChangeText={setTxnNumber} placeholder="Optional" />
-            <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </ScrollView>
-          <View style={styles.modalFooter}>
-            <Button title="Cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-            <Button title="Save Payment" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
-          </View>
-        </View>
+    <PremiumModal
+      visible={visible}
+      onClose={onClose}
+      title="Add Payment"
+      footer={
+        <>
+          <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1 }} />
+          <Button title="Save Payment" intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
+        </>
+      }
+    >
+      <Input label="Amount (Rs) *" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="0" />
+      <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+      <Text style={styles.fieldLabel}>Payment Method</Text>
+      <View style={styles.chipRow}>
+        {PAYMENT_METHODS.map(m => (
+          <TouchableOpacity key={m} style={[styles.chip, method === m && styles.chipSelected]} onPress={() => setMethod(m)}>
+            <Text style={[styles.chipText, method === m && styles.chipTextSelected]}>{m}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-    </Modal>
+      <Input label="Transaction Number" value={txnNumber} onChangeText={setTxnNumber} placeholder="Optional" />
+      <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </PremiumModal>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  supplierCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.sm, ...MD3Elevation.level1 },
-  supplierIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: MD3Colors.secondaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
-  supplierName: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 2 },
+  supplierCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md,
+    marginBottom: MD3Spacing.sm,
+    ...MD3Elevation.level2,
+  },
+  supplierIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: MD3Colors.secondaryContainer,
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: MD3Spacing.md,
+  },
+  supplierName: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 3 },
   supplierMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant },
-  dueBadge: { backgroundColor: MD3Colors.errorContainer, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: 4 },
-  dueText: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.error },
-  summaryRow: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, gap: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
-  summaryCard: { flex: 1, borderRadius: MD3Radius.md, padding: MD3Spacing.md, ...MD3Elevation.level1 },
+  summaryRow: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, gap: MD3Spacing.sm, marginBottom: MD3Spacing.md },
+  summaryCard: { flex: 1, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, ...MD3Elevation.level2 },
   summaryCardLabel: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginBottom: 4 },
-  summaryCardValue: { fontFamily: 'Roboto-Bold', fontSize: 16 },
-  tabRow: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.sm },
-  tab: { flex: 1, paddingVertical: MD3Spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: MD3Colors.primary },
-  tabText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurfaceVariant, textAlign: 'center' },
+  summaryCardValue: { fontFamily: 'Roboto-Bold', fontSize: 15 },
+  tabRow: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.sm, gap: MD3Spacing.xs },
+  tab: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: MD3Spacing.sm,
+    borderRadius: MD3Radius.lg,
+    backgroundColor: MD3Colors.surface,
+    ...MD3Elevation.level1,
+  },
+  tabActive: { backgroundColor: MD3Colors.primaryContainer },
+  tabText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
   tabTextActive: { color: MD3Colors.primary },
   filterBar: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.sm, gap: MD3Spacing.sm },
-  searchWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, ...MD3Elevation.level1 },
-  searchInput: { flex: 1, fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurface, paddingVertical: MD3Spacing.sm, paddingHorizontal: MD3Spacing.sm },
-  filterBtn: { position: 'relative', width: 44, height: 44, borderRadius: MD3Radius.full, backgroundColor: MD3Colors.surface, justifyContent: 'center', alignItems: 'center', ...MD3Elevation.level1 },
+  searchWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.full,
+    paddingHorizontal: MD3Spacing.md,
+    ...MD3Elevation.level1,
+  },
+  searchInput: {
+    flex: 1, fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurface,
+    paddingVertical: MD3Spacing.sm, paddingHorizontal: MD3Spacing.sm,
+  },
+  filterBtn: {
+    position: 'relative', width: 44, height: 44, borderRadius: MD3Radius.full,
+    backgroundColor: MD3Colors.surface, justifyContent: 'center', alignItems: 'center',
+    ...MD3Elevation.level1,
+  },
   filterDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: MD3Colors.error },
-  ledgerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.sm, ...MD3Elevation.level1 },
-  ledgerIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.sm },
+  ledgerCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md,
+    marginBottom: MD3Spacing.sm,
+    ...MD3Elevation.level2,
+  },
+  ledgerIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
   ledgerNote: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface, marginBottom: 2 },
   ledgerDate: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant },
   ledgerAmount: { fontFamily: 'Roboto-Bold', fontSize: 15 },
   runningBalance: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
-  ledgerDelete: { padding: MD3Spacing.xs, marginLeft: MD3Spacing.sm },
-  purchaseCard: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.md, ...MD3Elevation.level1 },
+  ledgerDelete: { padding: MD3Spacing.sm, marginLeft: MD3Spacing.xs },
+  purchaseCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md,
+    marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level2,
+  },
   purchaseHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.sm },
   purchaseInvoice: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface },
   purchaseDate: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
   purchaseAmount: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface },
-  purchaseItems: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.sm, padding: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
+  purchaseItems: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
   purchaseItemText: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 2 },
-  purchaseFooter: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm },
-  purchasePayText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.primary },
-  purchasePaidText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.success },
-  purchaseBalText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.error },
-  fab: { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 16, backgroundColor: MD3Colors.primary, justifyContent: 'center', alignItems: 'center', ...MD3Elevation.level4 },
-  backBtn: { position: 'absolute', bottom: 20, left: 20, backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.sm, ...MD3Elevation.level1 },
+  purchaseFooter: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.xs, flexWrap: 'wrap' },
+  backBtn: {
+    position: 'absolute', bottom: 24, left: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.full,
+    paddingHorizontal: MD3Spacing.lg,
+    paddingVertical: MD3Spacing.sm + 2,
+    ...MD3Elevation.level2,
+  },
   backText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.primary },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xl, borderTopRightRadius: MD3Radius.xl, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: MD3Spacing.lg, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
-  modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
-  modalBody: { padding: MD3Spacing.lg },
-  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
-  chip: { paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.full, borderWidth: 1.5, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface },
+  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: MD3Spacing.sm, marginBottom: MD3Spacing.md },
+  chip: {
+    paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm,
+    borderRadius: MD3Radius.full, borderWidth: 1.5, borderColor: MD3Colors.outline,
+    backgroundColor: MD3Colors.surface,
+  },
   chipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
   chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
   chipTextSelected: { color: MD3Colors.onPrimary },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
-  modalFooter: { flexDirection: 'row', padding: MD3Spacing.lg, borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
   pdfContainer: { flex: 1, backgroundColor: MD3Colors.background },
-  pdfToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, backgroundColor: MD3Colors.surface, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
+  pdfToolbar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md,
+    backgroundColor: MD3Colors.surface,
+    borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant,
+  },
   pdfTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, flex: 1 },
-  pdfWebviewWrap: { flex: 1, margin: MD3Spacing.sm, borderRadius: MD3Radius.md, overflow: 'hidden', ...MD3Elevation.level1 },
-  pdfPrintBtn: { backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.md, paddingVertical: MD3Spacing.md, marginHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.lg, alignItems: 'center' },
+  pdfCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center' },
+  pdfWebviewWrap: { flex: 1, margin: MD3Spacing.sm, borderRadius: MD3Radius.lg, overflow: 'hidden', ...MD3Elevation.level2 },
+  pdfPrintBtn: {
+    backgroundColor: MD3Colors.primary, borderRadius: MD3Radius.lg,
+    paddingVertical: MD3Spacing.md, marginHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.lg,
+    alignItems: 'center', ...MD3Elevation.level2,
+  },
   pdfPrintText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onPrimary },
 });

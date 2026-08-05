@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Image } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Plus, Pencil, Trash2, Truck, Phone, MessageCircle, MapPin, ChevronRight, X, Camera } from 'lucide-react-native';
+import { Plus, Truck, Pencil, Trash2, X, Phone, MapPin, ChevronRight, Camera } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getAllSuppliersFull, addSupplier, updateSupplier, deleteSupplier, SupplierWithStats } from '@/lib/db/repo';
-import { Button, Input, EmptyState, ScreenHeader } from '@/components/ui';
+import { Button, Input, EmptyState, ScreenHeader, FAB, StatusBadge } from '@/components/ui';
 
 export default function SuppliersScreen() {
   const router = useRouter();
@@ -15,13 +16,8 @@ export default function SuppliersScreen() {
   const [editing, setEditing] = useState<SupplierWithStats | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      setSuppliers(await getAllSuppliersFull());
-    } finally {
-      setLoading(false);
-    }
+    try { setSuppliers(await getAllSuppliersFull()); } finally { setLoading(false); }
   }, []);
-
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleDelete = (s: SupplierWithStats) => {
@@ -42,57 +38,45 @@ export default function SuppliersScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
         contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
         ListEmptyComponent={<EmptyState icon={<Truck size={48} color={MD3Colors.outline} />} title="No suppliers yet" subtitle="Tap + to add your first supplier" />}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={styles.cardMain}
-              onPress={() => router.push({ pathname: '/supplier-ledger', params: { supplierId: String(item.id) } })}
-            >
-              <View style={styles.iconWrap}>
-                <Truck size={22} color={MD3Colors.secondary} />
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-                <View style={styles.contactRow}>
-                  {item.phone ? (
-                    <View style={styles.contactItem}><Phone size={12} color={MD3Colors.onSurfaceVariant} /><Text style={styles.contactText}>{item.phone}</Text></View>
-                  ) : null}
-                  {item.city ? (
-                    <View style={styles.contactItem}><MapPin size={12} color={MD3Colors.onSurfaceVariant} /><Text style={styles.contactText}>{item.city}</Text></View>
-                  ) : null}
-                </View>
-                <View style={styles.balanceRow}>
-                  <View style={styles.balanceChip}>
-                    <Text style={styles.balanceLabel}>Purchased</Text>
-                    <Text style={styles.balanceValue}>{formatRs(item.total_purchase)}</Text>
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.cardHeader}
+                onPress={() => router.push({ pathname: '/supplier-ledger', params: { supplierId: String(item.id) } })}
+              >
+                <View style={styles.cardIconWrap}><Truck size={22} color={MD3Colors.secondary} strokeWidth={2.2} /></View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  <View style={styles.contactRow}>
+                    {item.phone ? <View style={styles.contactItem}><Phone size={12} color={MD3Colors.onSurfaceVariant} /><Text style={styles.contactText}>{item.phone}</Text></View> : null}
+                    {item.city ? <View style={styles.contactItem}><MapPin size={12} color={MD3Colors.onSurfaceVariant} /><Text style={styles.contactText}>{item.city}</Text></View> : null}
                   </View>
-                  <View style={styles.balanceChip}>
-                    <Text style={styles.balanceLabel}>Paid</Text>
-                    <Text style={[styles.balanceValue, { color: MD3Colors.success }]}>{formatRs(item.total_paid)}</Text>
-                  </View>
-                  <View style={[styles.balanceChip, item.remaining_balance > 0 && { backgroundColor: MD3Colors.errorContainer }]}>
-                    <Text style={styles.balanceLabel}>Balance</Text>
-                    <Text style={[styles.balanceValue, item.remaining_balance > 0 && { color: MD3Colors.error }]}>{formatRs(item.remaining_balance)}</Text>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statChip}><Text style={styles.statLabel}>Purchased</Text><Text style={styles.statValue}>{formatRs(item.total_purchase)}</Text></View>
+                    <View style={styles.statChip}><Text style={styles.statLabel}>Paid</Text><Text style={[styles.statValue, { color: MD3Colors.success }]}>{formatRs(item.total_paid)}</Text></View>
+                    {item.remaining_balance > 0 ? (
+                      <StatusBadge label={`Due ${formatRs(item.remaining_balance)}`} color={MD3Colors.error} bg={MD3Colors.errorContainer} />
+                    ) : <StatusBadge label="Settled" color={MD3Colors.success} bg={MD3Colors.successContainer} />}
                   </View>
                 </View>
+                <ChevronRight size={20} color={MD3Colors.outline} strokeWidth={2.2} />
+              </TouchableOpacity>
+              <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => { setEditing(item); setModalVisible(true); }}>
+                  <Pencil size={16} color={MD3Colors.onSurfaceVariant} /><Text style={styles.actionText}>Edit</Text>
+                </TouchableOpacity>
+                <View style={styles.actionDivider} />
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
+                  <Trash2 size={16} color={MD3Colors.error} /><Text style={[styles.actionText, { color: MD3Colors.error }]}>Delete</Text>
+                </TouchableOpacity>
               </View>
-              <ChevronRight size={20} color={MD3Colors.outline} />
-            </TouchableOpacity>
-            <View style={styles.cardActions}>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => { setEditing(item); setModalVisible(true); }}>
-                <Pencil size={16} color={MD3Colors.primary} /><Text style={styles.actionText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                <Trash2 size={16} color={MD3Colors.error} /><Text style={[styles.actionText, { color: MD3Colors.error }]}>Delete</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => { setEditing(null); setModalVisible(true); }}>
-        <Plus size={28} color={MD3Colors.onPrimary} />
-      </TouchableOpacity>
+      <FAB onPress={() => { setEditing(null); setModalVisible(true); }} intent="add" icon={Plus} />
 
       <SupplierFormModal
         visible={modalVisible}
@@ -124,14 +108,13 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
     if (visible) {
       if (supplier) {
         setName(supplier.name); setPhone(supplier.phone || ''); setWhatsapp(supplier.whatsapp || '');
-        setEmail(supplier.email || '');
-        setAddress(supplier.address || ''); setCity(supplier.city || ''); setState(supplier.state || '');
-        setGstNumber(supplier.gst_number || '');
+        setEmail(supplier.email || ''); setAddress(supplier.address || ''); setCity(supplier.city || '');
+        setState(supplier.state || ''); setGstNumber(supplier.gst_number || '');
         setOpeningBalance(String(supplier.opening_balance || 0)); setNotes(supplier.notes || '');
-        setStatus(supplier.status || 'Active');
-        setPhoto(supplier.photo || '');
+        setStatus(supplier.status || 'Active'); setPhoto(supplier.photo || '');
       } else {
-        setName(''); setPhone(''); setWhatsapp(''); setEmail(''); setAddress(''); setCity(''); setState(''); setGstNumber(''); setOpeningBalance(''); setNotes(''); setStatus('Active'); setPhoto('');
+        setName(''); setPhone(''); setWhatsapp(''); setEmail(''); setAddress(''); setCity(''); setState('');
+        setGstNumber(''); setOpeningBalance(''); setNotes(''); setStatus('Active'); setPhoto('');
       }
       setError('');
     }
@@ -149,30 +132,13 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
     setSaving(true);
     try {
       const data = {
-        name: name.trim(),
-        phone: phone.trim(),
-        whatsapp: whatsapp.trim(),
-        email: email.trim(),
-        address: address.trim(),
-        city: city.trim(),
-        state: state.trim(),
-        gst_number: gstNumber.trim(),
-        opening_balance: parseFloat(openingBalance) || 0,
-        notes: notes.trim(),
-        status,
-        photo,
+        name: name.trim(), phone: phone.trim(), whatsapp: whatsapp.trim(), email: email.trim(),
+        address: address.trim(), city: city.trim(), state: state.trim(), gst_number: gstNumber.trim(),
+        opening_balance: parseFloat(openingBalance) || 0, notes: notes.trim(), status, photo,
       };
-      if (supplier) {
-        await updateSupplier(supplier.id, data);
-      } else {
-        await addSupplier(data);
-      }
+      if (supplier) { await updateSupplier(supplier.id, data); } else { await addSupplier(data); }
       onSaved();
-    } catch (e: any) {
-      setError(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
+    } catch (e: any) { setError(e.message || 'Failed to save'); } finally { setSaving(false); }
   };
 
   return (
@@ -181,7 +147,7 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{supplier ? 'Edit Supplier' : 'Add Supplier'}</Text>
-            <TouchableOpacity onPress={onClose}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }}>
             <View style={styles.photoWrap}>
@@ -195,11 +161,7 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
                   </View>
                 )}
               </TouchableOpacity>
-              {photo ? (
-                <TouchableOpacity style={styles.photoRemove} onPress={() => setPhoto('')}>
-                  <Text style={styles.photoRemoveText}>Remove</Text>
-                </TouchableOpacity>
-              ) : null}
+              {photo ? <TouchableOpacity style={styles.photoRemove} onPress={() => setPhoto('')}><Text style={styles.photoRemoveText}>Remove</Text></TouchableOpacity> : null}
             </View>
             <Input label="Supplier Name *" value={name} onChangeText={setName} placeholder="e.g. Ali Bangle Works" />
             <View style={styles.rowInputs}>
@@ -227,8 +189,8 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
           <View style={styles.modalFooter}>
-            <Button title="Cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-            <Button title={supplier ? 'Update' : 'Save'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
+            <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
+            <Button title={supplier ? 'Update' : 'Save'} intent={supplier ? 'update' : 'save'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
       </View>
@@ -238,36 +200,37 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  card: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, marginBottom: MD3Spacing.md, ...MD3Elevation.level1, overflow: 'hidden' },
-  cardMain: { flexDirection: 'row', alignItems: 'center', padding: MD3Spacing.md },
-  iconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: MD3Colors.secondaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md },
+  card: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg, marginBottom: MD3Spacing.md, ...MD3Elevation.level2, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: MD3Spacing.md },
+  cardIconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: MD3Colors.secondaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md, marginTop: 2 },
   cardInfo: { flex: 1 },
-  cardName: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 4 },
+  cardTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 4 },
   contactRow: { flexDirection: 'row', gap: MD3Spacing.md, marginBottom: 6 },
   contactItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   contactText: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant },
-  balanceRow: { flexDirection: 'row', gap: MD3Spacing.sm },
-  balanceChip: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: 4 },
-  balanceLabel: { fontFamily: 'Roboto-Regular', fontSize: 10, color: MD3Colors.onSurfaceVariant },
-  balanceValue: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.onSurface },
+  statsRow: { flexDirection: 'row', gap: MD3Spacing.sm, flexWrap: 'wrap' },
+  statChip: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: 4 },
+  statLabel: { fontFamily: 'Roboto-Regular', fontSize: 10, color: MD3Colors.onSurfaceVariant },
+  statValue: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.onSurface },
   cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
-  actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm, gap: 6 },
-  actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.primary },
-  fab: { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 16, backgroundColor: MD3Colors.primary, justifyContent: 'center', alignItems: 'center', ...MD3Elevation.level3 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xl, borderTopRightRadius: MD3Radius.xl, maxHeight: '92%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: MD3Spacing.lg, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
+  actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm + 2, gap: 6 },
+  actionDivider: { width: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.xs },
+  actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xxl, borderTopRightRadius: MD3Radius.xxl, maxHeight: '92%', ...MD3Elevation.level5 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderBottomWidth: 1.5, borderBottomColor: MD3Colors.outlineVariant },
   modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center' },
   modalBody: { padding: MD3Spacing.lg },
   rowInputs: { flexDirection: 'row' },
-  errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
-  modalFooter: { flexDirection: 'row', padding: MD3Spacing.lg, borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
-  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs },
+  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
-  chip: { paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.full, borderWidth: 1.5, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface },
+  chip: { paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.full, borderWidth: 2, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface },
   chipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
-  chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
+  chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
   chipTextSelected: { color: MD3Colors.onPrimary },
+  errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
+  modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
   photoWrap: { alignItems: 'center', marginBottom: MD3Spacing.md },
   photoBtn: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', borderWidth: 2, borderColor: MD3Colors.outlineVariant },
   photoImg: { width: '100%', height: '100%' },

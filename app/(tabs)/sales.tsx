@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ShoppingCart, X, Search, AlertTriangle, FileText, ChevronDown, ChevronUp, Camera } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
@@ -10,7 +12,7 @@ import {
   CustomerWithStats, ProductWithDetails, SaleHeaderWithDetails, SaleItemInput, SaleHeader,
 } from '@/lib/db/repo';
 import type { Unit, PaymentMethod } from '@/lib/db/schema';
-import { Button, Input, EmptyState, ScreenHeader } from '@/components/ui';
+import { Button, Input, EmptyState, ScreenHeader, FAB, StatusBadge } from '@/components/ui';
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -50,41 +52,43 @@ export default function SalesScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
         contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
         ListEmptyComponent={<EmptyState icon={<ShoppingCart size={48} color={MD3Colors.outline} />} title="No sales yet" subtitle="Tap + to create a new sale" />}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.cardHeader} onPress={() => setDetailSale(item)}>
-              <View style={styles.cardIconWrap}><ShoppingCart size={20} color={MD3Colors.primary} /></View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>{item.invoice_number}</Text>
-                <Text style={styles.cardMeta}>{item.customer_name} · {formatDate(item.date)}</Text>
-                <View style={styles.badgeRow}>
-                  <View style={styles.badge}><Text style={styles.badgeText}>{item.items.length} items</Text></View>
-                  <View style={[styles.badge, { backgroundColor: MD3Colors.primaryContainer }]}><Text style={[styles.badgeText, { color: MD3Colors.primary }]}>{item.payment_method}</Text></View>
-                  {item.balance_due > 0 ? (
-                    <View style={[styles.badge, { backgroundColor: MD3Colors.errorContainer }]}><Text style={[styles.badgeText, { color: MD3Colors.error }]}>Due {formatRs(item.balance_due)}</Text></View>
-                  ) : <View style={[styles.badge, { backgroundColor: MD3Colors.successContainer }]}><Text style={[styles.badgeText, { color: MD3Colors.success }]}>Paid</Text></View>}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>
+            <View style={styles.card}>
+              <TouchableOpacity style={styles.cardHeader} onPress={() => setDetailSale(item)}>
+                <View style={styles.cardIconWrap}><ShoppingCart size={20} color={MD3Colors.primary} strokeWidth={2.2} /></View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardTitle}>{item.invoice_number}</Text>
+                  <Text style={styles.cardMeta}>{item.customer_name} · {formatDate(item.date)}</Text>
+                  <View style={styles.badgeRow}>
+                    <StatusBadge label={`${item.items.length} items`} color={MD3Colors.onSurfaceVariant} bg={MD3Colors.surfaceVariant} />
+                    <StatusBadge label={item.payment_method} color={MD3Colors.primary} bg={MD3Colors.primaryContainer} />
+                    {item.balance_due > 0 ? (
+                      <StatusBadge label={`Due ${formatRs(item.balance_due)}`} color={MD3Colors.error} bg={MD3Colors.errorContainer} />
+                    ) : <StatusBadge label="Paid" color={MD3Colors.success} bg={MD3Colors.successContainer} />}
+                  </View>
                 </View>
+                <Text style={styles.cardAmount}>{formatRs(item.grand_total)}</Text>
+              </TouchableOpacity>
+              <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => router.push({ pathname: '/invoice', params: { saleId: String(item.id) } })}>
+                  <FileText size={16} color={MD3Colors.primary} /><Text style={[styles.actionText, { color: MD3Colors.primary }]}>Invoice</Text>
+                </TouchableOpacity>
+                <View style={styles.actionDivider} />
+                <TouchableOpacity style={styles.actionBtn} onPress={() => setDetailSale(item)}>
+                  <Text style={styles.actionText}>Details</Text>
+                </TouchableOpacity>
+                <View style={styles.actionDivider} />
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
+                  <Trash2 size={16} color={MD3Colors.error} /><Text style={[styles.actionText, { color: MD3Colors.error }]}>Delete</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.cardAmount}>{formatRs(item.grand_total)}</Text>
-            </TouchableOpacity>
-            <View style={styles.cardActions}>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => router.push({ pathname: '/invoice', params: { saleId: String(item.id) } })}>
-                <FileText size={16} color={MD3Colors.primary} /><Text style={[styles.actionText, { color: MD3Colors.primary }]}>Invoice</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => setDetailSale(item)}>
-                <Text style={styles.actionText}>Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                <Trash2 size={16} color={MD3Colors.error} /><Text style={[styles.actionText, { color: MD3Colors.error }]}>Delete</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Plus size={28} color={MD3Colors.onPrimary} />
-      </TouchableOpacity>
+      <FAB onPress={() => setModalVisible(true)} intent="add" icon={Plus} />
 
       <SaleFormModal visible={modalVisible} onClose={() => setModalVisible(false)} onSaved={() => { setModalVisible(false); load(); }} />
       <SaleDetailModal sale={detailSale} onClose={() => setDetailSale(null)} formatRs={formatRs} formatDate={formatDate} />
@@ -92,9 +96,6 @@ export default function SalesScreen() {
   );
 }
 
-// ============================================================
-// SALE FORM MODAL
-// ============================================================
 function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClose: () => void; onSaved: () => void }) {
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
@@ -150,7 +151,7 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
   const updateLineItem = (i: number, field: keyof LineItem, val: any) => {
     setLineItems(prev => prev.map((li, idx) => idx === i ? { ...li, [field]: val } : li));
   };
-  const addLineItem = () => setLineItems(prev => [...prev, { productId: null, variantId: null, productName: '', quantity: '', unit: 'Piece' as Unit, unitPrice: '' }]);
+  const addLineItem = () => setLineItems(prev => [...prev, { productId: null, variantId: null, productName: '', quantity: '', unit: 'Box' as Unit, unitPrice: '' }]);
   const removeLineItem = (i: number) => setLineItems(prev => prev.filter((_, idx) => idx !== i));
 
   const lineTotal = (li: LineItem) => (parseFloat(li.quantity) || 0) * (parseFloat(li.unitPrice) || 0);
@@ -252,16 +253,14 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>New Sale</Text>
-            <TouchableOpacity onPress={onClose}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 120 }}>
-            {/* Invoice info */}
             <View style={styles.rowInputs}>
               <Input label="Invoice #" value={invoiceNumber} onChangeText={setInvoiceNumber} placeholder="Auto" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
               <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={{ flex: 1 }} />
             </View>
 
-            {/* Customer type */}
             <Text style={styles.fieldLabel}>Customer Type</Text>
             <View style={styles.chipRow}>
               <TouchableOpacity style={[styles.chip, isWalkin && styles.chipSelected]} onPress={() => { setIsWalkin(true); setCustomerId(null); }}>
@@ -287,10 +286,9 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
               </>
             )}
 
-            {/* Product search */}
             <Text style={styles.fieldLabel}>Search Product (Name or Design #)</Text>
             <View style={styles.searchWrap}>
-              <Search size={18} color={MD3Colors.onSurfaceVariant} style={{ marginLeft: MD3Spacing.sm }} />
+              <Search size={18} color={MD3Colors.primary} strokeWidth={2.2} style={{ marginLeft: MD3Spacing.sm }} />
               <TextInput
                 style={styles.searchInput}
                 value={searchQuery}
@@ -300,10 +298,9 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
               />
             </View>
 
-            {/* Line items */}
             <View style={styles.itemsHeader}>
               <Text style={styles.fieldLabel}>Products</Text>
-              <TouchableOpacity onPress={addLineItem}><Plus size={20} color={MD3Colors.primary} /></TouchableOpacity>
+              <TouchableOpacity onPress={addLineItem} style={styles.addBtn}><Plus size={20} color={MD3Colors.primary} strokeWidth={2.4} /></TouchableOpacity>
             </View>
 
             {lineItems.map((li, i) => {
@@ -318,7 +315,6 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                     )}
                   </View>
 
-                  {/* Product picker toggle */}
                   <TouchableOpacity style={styles.productPickerBtn} onPress={() => setShowProductPicker(showProductPicker === i ? null : i)}>
                     <Text style={li.productId ? styles.productPickerText : styles.productPickerPlaceholder}>
                       {li.productId ? li.productName : 'Select a product...'}
@@ -355,7 +351,6 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                     </View>
                   )}
 
-                  {/* Variant selector */}
                   {li.productId && (() => {
                     const product = products.find(p => p.id === li.productId);
                     if (!product || !product.variants || product.variants.length === 0) return null;
@@ -370,7 +365,6 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                     );
                   })()}
 
-                  {/* Stock warning */}
                   {li.productId && stock !== null && isLowStock && (
                     <View style={styles.stockWarning}>
                       <AlertTriangle size={14} color={MD3Colors.warning} />
@@ -378,7 +372,6 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                     </View>
                   )}
 
-                  {/* Inputs */}
                   <View style={styles.lineItemInputs}>
                     <View style={styles.inputGroup}>
                       <Text style={styles.inputLabel}>Qty</Text>
@@ -407,7 +400,7 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
               );
             })}
 
-            {/* Summary */}
+            {/* Premium Summary Card */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>{formatRs(subtotal)}</Text></View>
               <View style={styles.rowInputs}>
@@ -415,7 +408,11 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                 <Input label="Discount (Rs)" value={discount} onChangeText={setDiscount} keyboardType="numeric" placeholder="0" style={{ flex: 1 }} />
               </View>
               <Input label="Extra Charges (Rs)" value={extraCharges} onChangeText={setExtraCharges} keyboardType="numeric" placeholder="0" />
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Grand Total</Text><Text style={[styles.summaryValue, { fontSize: 18 }]}>{formatRs(grandTotal)}</Text></View>
+              {/* Grand Total highlighted */}
+              <LinearGradient colors={['#1565C0', '#0D47A1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.grandTotalRow}>
+                <Text style={styles.grandTotalLabel}>GRAND TOTAL</Text>
+                <Text style={styles.grandTotalValue}>{formatRs(grandTotal)}</Text>
+              </LinearGradient>
 
               <Text style={styles.fieldLabel}>Payment Method</Text>
               <View style={styles.chipRow}>
@@ -453,7 +450,7 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
                   <Text style={styles.screenshotRemoveText}>Remove Screenshot</Text>
                 </TouchableOpacity>
               ) : null}
-              <View style={[styles.summaryRow, balanceDue > 0 && { backgroundColor: MD3Colors.errorContainer, borderRadius: MD3Radius.sm, padding: MD3Spacing.sm }]}>
+              <View style={[styles.summaryRow, balanceDue > 0 && styles.balanceDueRow]}>
                 <Text style={styles.summaryLabel}>Balance Due</Text>
                 <Text style={[styles.summaryValue, balanceDue > 0 && { color: MD3Colors.error }]}>{formatRs(balanceDue)}</Text>
               </View>
@@ -463,8 +460,8 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
           <View style={styles.modalFooter}>
-            <Button title="Cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-            <Button title="Save Sale" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
+            <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
+            <Button title="Save Sale" intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
       </View>
@@ -472,9 +469,6 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
   );
 }
 
-// ============================================================
-// SALE DETAIL MODAL
-// ============================================================
 function SaleDetailModal({ sale, onClose, formatRs, formatDate }: { sale: SaleHeaderWithDetails | null; onClose: () => void; formatRs: (n: number) => string; formatDate: (ts: number) => string }) {
   if (!sale) return null;
   return (
@@ -483,7 +477,7 @@ function SaleDetailModal({ sale, onClose, formatRs, formatDate }: { sale: SaleHe
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Sale Details</Text>
-            <TouchableOpacity onPress={onClose}><X size={24} color={MD3Colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
             <View style={styles.detailRow}><Text style={styles.detailLabel}>Invoice #</Text><Text style={styles.detailValue}>{sale.invoice_number}</Text></View>
@@ -507,7 +501,10 @@ function SaleDetailModal({ sale, onClose, formatRs, formatDate }: { sale: SaleHe
             <View style={styles.detailSummary}>
               <View style={styles.detailRow}><Text style={styles.detailLabel}>Subtotal</Text><Text style={styles.detailValueBold}>{formatRs(sale.subtotal)}</Text></View>
               <View style={styles.detailRow}><Text style={styles.detailLabel}>Discount</Text><Text style={[styles.detailValueBold, { color: MD3Colors.error }]}>- {formatRs(sale.discount)}</Text></View>
-              <View style={styles.detailRow}><Text style={styles.detailLabel}>Grand Total</Text><Text style={[styles.detailValueBold, { fontSize: 18 }]}>{formatRs(sale.grand_total)}</Text></View>
+              <LinearGradient colors={['#1565C0', '#0D47A1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.detailGrandTotal}>
+                <Text style={styles.detailGrandTotalLabel}>GRAND TOTAL</Text>
+                <Text style={styles.detailGrandTotalValue}>{formatRs(sale.grand_total)}</Text>
+              </LinearGradient>
               <View style={styles.detailRow}><Text style={styles.detailLabel}>Received</Text><Text style={[styles.detailValueBold, { color: MD3Colors.success }]}>{formatRs(sale.amount_received)}</Text></View>
               <View style={styles.detailRow}><Text style={styles.detailLabel}>Balance Due</Text><Text style={[styles.detailValueBold, sale.balance_due > 0 && { color: MD3Colors.error }]}>{formatRs(sale.balance_due)}</Text></View>
             </View>
@@ -523,43 +520,43 @@ function formatRs(n: number) { return 'Rs ' + (n || 0).toLocaleString('en-PK'); 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  card: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.md, marginBottom: MD3Spacing.md, ...MD3Elevation.level1, overflow: 'hidden' },
+  card: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg, marginBottom: MD3Spacing.md, ...MD3Elevation.level2, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: MD3Spacing.md },
-  cardIconWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: MD3Colors.primaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md, marginTop: 2 },
+  cardIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: MD3Colors.primaryContainer, justifyContent: 'center', alignItems: 'center', marginRight: MD3Spacing.md, marginTop: 2 },
   cardInfo: { flex: 1 },
   cardTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 2 },
-  cardMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 4 },
+  cardMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 6 },
   badgeRow: { flexDirection: 'row', gap: MD3Spacing.sm, flexWrap: 'wrap' },
-  badge: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: 4 },
-  badgeText: { fontFamily: 'Roboto-Medium', fontSize: 11, color: MD3Colors.onSurfaceVariant },
-  cardAmount: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginTop: 2 },
+  cardAmount: { fontFamily: 'Roboto-Bold', fontSize: 17, color: MD3Colors.primary, marginTop: 2 },
   cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
-  actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm, gap: 6 },
-  actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
-  fab: { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 16, backgroundColor: MD3Colors.primary, justifyContent: 'center', alignItems: 'center', ...MD3Elevation.level4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xl, borderTopRightRadius: MD3Radius.xl, maxHeight: '95%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: MD3Spacing.lg, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
+  actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm + 2, gap: 6 },
+  actionDivider: { width: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.xs },
+  actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xxl, borderTopRightRadius: MD3Radius.xxl, maxHeight: '95%', ...MD3Elevation.level5 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderBottomWidth: 1.5, borderBottomColor: MD3Colors.outlineVariant },
   modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center' },
   modalBody: { padding: MD3Spacing.lg },
-  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs },
+  fieldLabel: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs, marginTop: MD3Spacing.xs, fontWeight: '600' },
   rowInputs: { flexDirection: 'row' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
-  chip: { paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.full, borderWidth: 1.5, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface },
+  chip: { paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, borderRadius: MD3Radius.full, borderWidth: 2, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface },
   chipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
-  chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
+  chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
   chipTextSelected: { color: MD3Colors.onPrimary },
   customerScroll: { flexDirection: 'row', marginBottom: MD3Spacing.sm },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.sm, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.md },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.md },
   searchInput: { flex: 1, paddingHorizontal: MD3Spacing.sm, paddingVertical: MD3Spacing.sm, fontSize: 14, fontFamily: 'Roboto-Regular', color: MD3Colors.onSurface },
   itemsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: MD3Spacing.sm },
-  lineItemCard: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginBottom: MD3Spacing.md },
+  addBtn: { padding: MD3Spacing.xs },
+  lineItemCard: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, marginBottom: MD3Spacing.md, borderWidth: 1, borderColor: MD3Colors.outlineVariant },
   lineItemTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: MD3Spacing.sm },
   lineItemTitle: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface },
-  productPickerBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, marginBottom: MD3Spacing.sm },
+  productPickerBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm, marginBottom: MD3Spacing.sm, backgroundColor: MD3Colors.surface },
   productPickerText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface, flex: 1 },
   productPickerPlaceholder: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.outline, flex: 1 },
-  productDropdown: { borderWidth: 1, borderColor: MD3Colors.outlineVariant, borderRadius: MD3Radius.sm, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.sm, overflow: 'hidden' },
+  productDropdown: { borderWidth: 1, borderColor: MD3Colors.outlineVariant, borderRadius: MD3Radius.md, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.sm, overflow: 'hidden' },
   productOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: MD3Spacing.sm, paddingHorizontal: MD3Spacing.md, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
   productOptionName: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurface },
   productOptionMeta: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
@@ -576,31 +573,38 @@ const styles = StyleSheet.create({
   lineItemInputs: { flexDirection: 'row', gap: MD3Spacing.sm, alignItems: 'flex-end' },
   inputGroup: { flex: 1 },
   inputLabel: { fontFamily: 'Roboto-Regular', fontSize: 10, color: MD3Colors.onSurfaceVariant, marginBottom: 2 },
-  lineInput: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: MD3Spacing.sm, fontSize: 14, fontFamily: 'Roboto-Regular', color: MD3Colors.onSurface },
+  lineInput: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.sm, paddingVertical: MD3Spacing.sm, fontSize: 14, fontFamily: 'Roboto-Regular', color: MD3Colors.onSurface, backgroundColor: MD3Colors.surface },
   unitRow: { flexDirection: 'row', gap: 4 },
-  unitChip: { width: 32, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: MD3Colors.outline, justifyContent: 'center', alignItems: 'center', backgroundColor: MD3Colors.surface },
+  unitChip: { width: 32, height: 36, borderRadius: 8, borderWidth: 1.5, borderColor: MD3Colors.outline, justifyContent: 'center', alignItems: 'center', backgroundColor: MD3Colors.surface },
   unitChipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
   unitChipText: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.onSurfaceVariant },
   unitChipTextSelected: { color: MD3Colors.onPrimary },
-  lineTotalText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, paddingVertical: 8 },
-  summaryCard: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.md, marginTop: MD3Spacing.sm },
+  lineTotalText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.primary, paddingVertical: 8 },
+  summaryCard: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, marginTop: MD3Spacing.sm, borderWidth: 1, borderColor: MD3Colors.outlineVariant },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: MD3Spacing.xs },
   summaryLabel: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurfaceVariant },
   summaryValue: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface },
+  grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm + 2, marginVertical: MD3Spacing.sm },
+  grandTotalLabel: { fontFamily: 'Roboto-Bold', fontSize: 14, color: '#FFFFFF', fontWeight: '700' },
+  grandTotalValue: { fontFamily: 'Roboto-Bold', fontSize: 20, color: '#FFFFFF', fontWeight: '700' },
+  balanceDueRow: { backgroundColor: MD3Colors.errorContainer, borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.sm, paddingVertical: MD3Spacing.sm },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
-  modalFooter: { flexDirection: 'row', padding: MD3Spacing.lg, borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
+  modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: MD3Spacing.sm, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
   detailLabel: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant },
   detailValue: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface },
   detailValueBold: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface },
   sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginTop: MD3Spacing.md, marginBottom: MD3Spacing.sm },
-  detailItemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.sm, padding: MD3Spacing.sm, marginBottom: MD3Spacing.xs },
+  detailItemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.sm, marginBottom: MD3Spacing.xs },
   detailItemName: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface },
   detailItemMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
-  detailItemTotal: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface },
-  detailSummary: { marginTop: MD3Spacing.md, backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.md },
+  detailItemTotal: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.primary },
+  detailSummary: { marginTop: MD3Spacing.md, backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.lg, padding: MD3Spacing.md },
+  detailGrandTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.sm + 2, marginVertical: MD3Spacing.sm },
+  detailGrandTotalLabel: { fontFamily: 'Roboto-Bold', fontSize: 14, color: '#FFFFFF' },
+  detailGrandTotalValue: { fontFamily: 'Roboto-Bold', fontSize: 20, color: '#FFFFFF' },
   detailNote: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginTop: MD3Spacing.md, fontStyle: 'italic' },
-  screenshotBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderStyle: 'dashed', borderRadius: MD3Radius.sm, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.xs, overflow: 'hidden' },
+  screenshotBtn: { borderWidth: 1.5, borderColor: MD3Colors.outline, borderStyle: 'dashed', borderRadius: MD3Radius.md, backgroundColor: MD3Colors.surface, marginBottom: MD3Spacing.xs, overflow: 'hidden' },
   screenshotImg: { width: '100%', height: 140, resizeMode: 'cover' },
   screenshotPlaceholder: { height: 80, justifyContent: 'center', alignItems: 'center' },
   screenshotText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 4 },

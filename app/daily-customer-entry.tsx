@@ -9,9 +9,30 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ScreenHeader, Input, Button, Card } from '@/components/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import {
+  UserPlus,
+  Phone,
+  Receipt,
+  Wallet,
+  IndianRupee,
+  CheckCircle2,
+  Camera,
+  X,
+  Eye,
+  Pencil,
+  Trash2,
+  FileText,
+  CreditCard,
+  Clock,
+  Image as ImageIcon,
+  ScrollText,
+} from 'lucide-react-native';
+import { ScreenHeader, Input, Button, EmptyState } from '@/components/ui';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getDb } from '@/lib/db/database';
 import { getDailyCustomerEntries } from '@/lib/db/repo';
@@ -243,182 +264,706 @@ export default function DailyCustomerEntryScreen() {
     ]);
   }
 
+  const fmt = (n: number) => '₹' + (Number(n) || 0).toFixed(2);
+  const paymentModes = ['Cash', 'UPI', 'Card'] as const;
+  const paymentStatuses = ['Pending', 'Paid', 'Partial'] as const;
+
+  const statusBadge = (status?: string) => {
+    if (status === 'Paid') return { label: 'Paid', color: MD3Colors.success, bg: MD3Colors.successContainer };
+    if (status === 'Partial') return { label: 'Partial', color: MD3Colors.warning, bg: MD3Colors.warningContainer };
+    return { label: 'Pending', color: MD3Colors.error, bg: MD3Colors.errorContainer };
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}>
+    <View style={styles.container}>
       <ScreenHeader title="Daily Customer Entry" subtitle="Record bills & payments" />
 
-      <Card style={{ marginBottom: MD3Spacing.md }}>
-        <Input
-          label="Customer Name"
-          value={form.customer_name}
-          onChangeText={(t) => setField('customer_name', t)}
-          placeholder="Enter customer name"
-        />
-        <Input
-          label="Mobile Number"
-          value={form.mobile}
-          onChangeText={(t) => setField('mobile', t)}
-          placeholder="Mobile number"
-          keyboardType="phone-pad"
-        />
-        <Input
-          label="Bill Number"
-          value={form.bill_no}
-          onChangeText={(t) => setField('bill_no', t)}
-          placeholder="Bill number"
-        />
-        <Input
-          label="Bill Amount"
-          value={String(form.bill_amount ?? '')}
-          onChangeText={(t) => setField('bill_amount', Number(t) || 0)}
-          placeholder="0"
-          keyboardType="numeric"
-        />
-        <Input
-          label="Paid Amount"
-          value={String(form.paid_amount ?? '')}
-          onChangeText={(t) => setField('paid_amount', Number(t) || 0)}
-          placeholder="0"
-          keyboardType="numeric"
-        />
-
-        <View style={{ marginBottom: MD3Spacing.md }}>
-          <Text style={styles.label}>Balance Amount</Text>
-          <Text style={styles.balance}>{Number(form.balance_amount ?? 0).toFixed(2)}</Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: MD3Spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabelSmall}>Payment Mode</Text>
-            <TouchableOpacity
-              onPress={() => {
-                const next = form.payment_mode === 'Cash' ? 'UPI' : form.payment_mode === 'UPI' ? 'Card' : 'Cash';
-                setField('payment_mode', next);
-              }}
-              style={styles.pill}
-            >
-              <Text style={styles.pillText}>{form.payment_mode}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabelSmall}>Payment Status</Text>
-            <TouchableOpacity
-              onPress={() => {
-                const next = form.payment_status === 'Pending' ? 'Paid' : form.payment_status === 'Paid' ? 'Partial' : 'Pending';
-                setField('payment_status', next);
-              }}
-              style={styles.pill}
-            >
-              <Text style={styles.pillText}>{form.payment_status}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <Input
-          label="Notes"
-          value={form.notes || ''}
-          onChangeText={(t) => setField('notes', t)}
-          placeholder="Optional notes"
-          multiline
-        />
-
-        <View style={{ flexDirection: 'row', gap: MD3Spacing.md, marginTop: MD3Spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabelSmall}>Bill Photo</Text>
-            <TouchableOpacity style={styles.imageButton} onPress={() => pickImage('bill_photo')}>
-              <Text style={{ color: MD3Colors.primary }}>Pick Bill Image</Text>
-            </TouchableOpacity>
-            {form.bill_photo ? <Image source={{ uri: form.bill_photo }} style={styles.preview} /> : null}
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabelSmall}>Payment Photo</Text>
-            <TouchableOpacity style={styles.imageButton} onPress={() => pickImage('payment_photo')}>
-              <Text style={{ color: MD3Colors.primary }}>Pick Payment Image</Text>
-            </TouchableOpacity>
-            {form.payment_photo ? <Image source={{ uri: form.payment_photo }} style={styles.preview} /> : null}
-          </View>
-        </View>
-
-        <View style={{ marginTop: MD3Spacing.md }}>
-          <Button title={editingId ? 'Update' : 'Save'} onPress={saveEntry} loading={loading} />
-        </View>
-      </Card>
-
-      <Text style={styles.sectionTitle}>Saved Entries</Text>
-
-      {entries.map((e) => (
-        <Card key={String(e.id)} style={{ marginBottom: MD3Spacing.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.entryTitle}>{e.customer_name}</Text>
-              <Text style={styles.entrySub}>{e.bill_no} • ₹{(e.bill_amount ?? 0).toFixed(2)} • Paid ₹{(e.paid_amount ?? 0).toFixed(2)}</Text>
-              <Text style={styles.entrySubSmall}>{new Date(e.created_at ?? 0).toLocaleString()}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => setViewing(e)}>
-                <Text style={styles.actionText}>View</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => onEdit(e)}>
-                <Text style={styles.actionText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(e)}>
-                <Text style={styles.deleteText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Card>
-      ))}
-
-      <Modal visible={!!viewing} animationType="slide" onRequestClose={() => setViewing(null)}>
-        <ScrollView style={[styles.container, { padding: MD3Spacing.lg }]}>
-          <TouchableOpacity onPress={() => setViewing(null)}>
-            <Text style={{ color: MD3Colors.primary, marginBottom: MD3Spacing.md }}>Close</Text>
-          </TouchableOpacity>
-          {viewing ? (
-            <>
-              <Text style={styles.entryViewTitle}>{viewing.customer_name}</Text>
-              <Text style={styles.entrySub}>{viewing.mobile}</Text>
-              <Text style={styles.entrySub}>Bill: {viewing.bill_no}</Text>
-              <Text style={styles.entrySub}>Bill Amount: ₹{(viewing.bill_amount ?? 0).toFixed(2)}</Text>
-              <Text style={styles.entrySub}>Paid: ₹{(viewing.paid_amount ?? 0).toFixed(2)}</Text>
-              <Text style={styles.entrySub}>Balance: ₹{(viewing.balance_amount ?? 0).toFixed(2)}</Text>
-              <Text style={[styles.entrySub, { marginTop: MD3Spacing.sm }]}>Payment Mode: {viewing.payment_mode}</Text>
-              <Text style={styles.entrySub}>Payment Status: {viewing.payment_status}</Text>
-              <Text style={[styles.entrySub, { marginTop: MD3Spacing.sm }]}>Notes</Text>
-              <Text style={styles.notes}>{viewing.notes}</Text>
-
-              <View style={{ flexDirection: 'row', gap: MD3Spacing.md, marginTop: MD3Spacing.md }}>
-                {viewing.bill_photo ? <Image source={{ uri: viewing.bill_photo }} style={styles.viewImage} /> : null}
-                {viewing.payment_photo ? <Image source={{ uri: viewing.payment_photo }} style={styles.viewImage} /> : null}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* ===== FORM CARD ===== */}
+          <Animated.View entering={FadeIn.duration(300)}>
+            <View style={styles.formCard}>
+              <View style={styles.formHeader}>
+                <View style={[styles.formIconWrap, editingId ? { backgroundColor: MD3Colors.secondaryContainer } : null]}>
+                  {editingId ? (
+                    <Pencil size={24} color={MD3Colors.onSecondaryContainer} strokeWidth={2.2} />
+                  ) : (
+                    <UserPlus size={24} color={MD3Colors.onPrimaryContainer} strokeWidth={2.2} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.formTitle}>{editingId ? 'Edit Entry' : 'New Entry'}</Text>
+                  <Text style={styles.formSubtitle}>
+                    {editingId ? `Editing #${editingId}` : 'Fill customer bill & payment details'}
+                  </Text>
+                </View>
+                {editingId ? (
+                  <TouchableOpacity
+                    onPress={() => { setForm(empty); setEditingId(null); }}
+                    style={styles.cancelEditBtn}
+                  >
+                    <X size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
+                  </TouchableOpacity>
+                ) : null}
               </View>
-            </>
-          ) : null}
+
+              <Input
+                label="Customer Name *"
+                value={form.customer_name}
+                onChangeText={(t) => setField('customer_name', t)}
+                placeholder="Enter customer name"
+              />
+
+              <Input
+                label="Mobile Number"
+                value={form.mobile}
+                onChangeText={(t) => setField('mobile', t)}
+                placeholder="Mobile number"
+                keyboardType="phone-pad"
+              />
+
+              <Input
+                label="Bill Number"
+                value={form.bill_no}
+                onChangeText={(t) => setField('bill_no', t)}
+                placeholder="Bill number"
+              />
+
+              <View style={styles.rowInputs}>
+                <Input
+                  label="Bill Amount"
+                  value={String(form.bill_amount ?? '')}
+                  onChangeText={(t) => setField('bill_amount', Number(t) || 0)}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  style={{ flex: 1, marginRight: MD3Spacing.sm }}
+                />
+                <Input
+                  label="Paid Amount"
+                  value={String(form.paid_amount ?? '')}
+                  onChangeText={(t) => setField('paid_amount', Number(t) || 0)}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  style={{ flex: 1 }}
+                />
+              </View>
+
+              {/* Balance highlight */}
+              <View style={styles.balanceWrap}>
+                <View style={styles.balanceLeft}>
+                  <Wallet size={20} color={MD3Colors.onPrimaryContainer} strokeWidth={2.2} />
+                  <Text style={styles.balanceLabel}>Balance Amount</Text>
+                </View>
+                <Text style={styles.balanceValue}>{fmt(form.balance_amount ?? 0)}</Text>
+              </View>
+
+              {/* Payment mode chips */}
+              <Text style={styles.fieldLabel}>Payment Mode</Text>
+              <View style={styles.chipRow}>
+                {paymentModes.map((m) => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.chip, form.payment_mode === m && styles.chipSelected]}
+                    onPress={() => setField('payment_mode', m)}
+                  >
+                    <Text style={[styles.chipText, form.payment_mode === m && styles.chipTextSelected]}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Payment status chips */}
+              <Text style={styles.fieldLabel}>Payment Status</Text>
+              <View style={styles.chipRow}>
+                {paymentStatuses.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.chip, form.payment_status === s && chipStatusSelected(s)]}
+                    onPress={() => setField('payment_status', s)}
+                  >
+                    <Text style={[styles.chipText, form.payment_status === s && { color: MD3Colors.onPrimary }]}>
+                      {s}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Input
+                label="Notes"
+                value={form.notes || ''}
+                onChangeText={(t) => setField('notes', t)}
+                placeholder="Optional notes"
+                multiline
+              />
+
+              {/* Image pickers */}
+              <View style={styles.rowInputs}>
+                <View style={{ flex: 1, marginRight: MD3Spacing.sm }}>
+                  <Text style={styles.fieldLabel}>Bill Photo</Text>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => pickImage('bill_photo')}>
+                    {form.bill_photo ? (
+                      <Image source={{ uri: form.bill_photo }} style={styles.preview} />
+                    ) : (
+                      <View style={styles.imagePlaceholder}>
+                        <Camera size={24} color={MD3Colors.onSurfaceVariant} strokeWidth={2} />
+                        <Text style={styles.imagePlaceholderText}>Pick Bill Image</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {form.bill_photo ? (
+                    <TouchableOpacity onPress={() => setField('bill_photo', '')} style={styles.removeBtn}>
+                      <X size={12} color={MD3Colors.error} strokeWidth={2.4} />
+                      <Text style={styles.removeBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Payment Photo</Text>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => pickImage('payment_photo')}>
+                    {form.payment_photo ? (
+                      <Image source={{ uri: form.payment_photo }} style={styles.preview} />
+                    ) : (
+                      <View style={styles.imagePlaceholder}>
+                        <Camera size={24} color={MD3Colors.onSurfaceVariant} strokeWidth={2} />
+                        <Text style={styles.imagePlaceholderText}>Pick Payment Image</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {form.payment_photo ? (
+                    <TouchableOpacity onPress={() => setField('payment_photo', '')} style={styles.removeBtn}>
+                      <X size={12} color={MD3Colors.error} strokeWidth={2.4} />
+                      <Text style={styles.removeBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Save / Update buttons */}
+              <View style={styles.formActions}>
+                {editingId ? (
+                  <>
+                    <Button
+                      title="Cancel"
+                      intent="cancel"
+                      variant="outlined"
+                      onPress={() => { setForm(empty); setEditingId(null); }}
+                      style={{ flex: 1, marginRight: MD3Spacing.sm }}
+                    />
+                    <Button
+                      title="Update"
+                      intent="update"
+                      onPress={saveEntry}
+                      loading={loading}
+                      style={{ flex: 1 }}
+                    />
+                  </>
+                ) : (
+                  <Button
+                    title="Save Entry"
+                    intent="save"
+                    onPress={saveEntry}
+                    loading={loading}
+                    fullWidth
+                  />
+                )}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* ===== SAVED ENTRIES ===== */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Saved Entries</Text>
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{entries.length}</Text>
+            </View>
+          </View>
+
+          {entries.length === 0 ? (
+            <EmptyState
+              icon={<ScrollText size={48} color={MD3Colors.outline} />}
+              title="No entries yet"
+              subtitle="Fill the form above to add your first entry"
+            />
+          ) : (
+            entries.map((e, index) => {
+              const badge = statusBadge(e.payment_status);
+              return (
+                <Animated.View key={String(e.id)} entering={FadeInDown.duration(250).delay(index * 40)}>
+                  <View style={styles.entryCard}>
+                    <View style={styles.entryCardHeader}>
+                      <View style={styles.entryIconWrap}>
+                        <UserPlus size={20} color={MD3Colors.primary} strokeWidth={2.2} />
+                      </View>
+                      <View style={styles.entryInfo}>
+                        <Text style={styles.entryTitle}>{e.customer_name}</Text>
+                        <Text style={styles.entryMeta}>
+                          {e.bill_no ? `Bill #${e.bill_no}` : 'No bill no'}{e.mobile ? ` · ${e.mobile}` : ''}
+                        </Text>
+                        <View style={styles.entryStatsRow}>
+                          <View style={styles.statChip}>
+                            <Receipt size={11} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
+                            <Text style={styles.statValue}>{fmt(e.bill_amount ?? 0)}</Text>
+                          </View>
+                          <View style={styles.statChip}>
+                            <Wallet size={11} color={MD3Colors.success} strokeWidth={2.2} />
+                            <Text style={[styles.statValue, { color: MD3Colors.success }]}>{fmt(e.paid_amount ?? 0)}</Text>
+                          </View>
+                          {(e.balance_amount ?? 0) > 0 ? (
+                            <View style={[styles.statChip, { backgroundColor: MD3Colors.errorContainer }]}>
+                              <IndianRupee size={11} color={MD3Colors.error} strokeWidth={2.2} />
+                              <Text style={[styles.statValue, { color: MD3Colors.error }]}>{fmt(e.balance_amount ?? 0)}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                      <View style={styles.entryBadges}>
+                        <View style={[styles.statusBadgeSmall, { backgroundColor: badge.bg }]}>
+                          <Text style={[styles.statusBadgeSmallText, { color: badge.color }]}>{badge.label}</Text>
+                        </View>
+                        {e.payment_mode ? (
+                          <View style={[styles.statusBadgeSmall, { backgroundColor: MD3Colors.secondaryContainer }]}>
+                            <Text style={[styles.statusBadgeSmallText, { color: MD3Colors.onSecondaryContainer }]}>{e.payment_mode}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {e.created_at ? (
+                      <View style={styles.entryDateRow}>
+                        <Clock size={12} color={MD3Colors.outline} strokeWidth={2.2} />
+                        <Text style={styles.entryDateText}>{new Date(e.created_at).toLocaleString()}</Text>
+                      </View>
+                    ) : null}
+
+                    <View style={styles.entryCardActions}>
+                      <TouchableOpacity style={styles.actionBtn} onPress={() => setViewing(e)}>
+                        <Eye size={15} color={MD3Colors.warning} strokeWidth={2.2} />
+                        <Text style={[styles.actionText, { color: MD3Colors.warning }]}>View</Text>
+                      </TouchableOpacity>
+                      <View style={styles.actionDivider} />
+                      <TouchableOpacity style={styles.actionBtn} onPress={() => onEdit(e)}>
+                        <Pencil size={15} color={MD3Colors.primary} strokeWidth={2.2} />
+                        <Text style={[styles.actionText, { color: MD3Colors.primary }]}>Edit</Text>
+                      </TouchableOpacity>
+                      <View style={styles.actionDivider} />
+                      <TouchableOpacity style={styles.actionBtn} onPress={() => onDelete(e)}>
+                        <Trash2 size={15} color={MD3Colors.error} strokeWidth={2.2} />
+                        <Text style={[styles.actionText, { color: MD3Colors.error }]}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Animated.View>
+              );
+            })
+          )}
         </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* ===== VIEW MODAL ===== */}
+      <Modal visible={!!viewing} animationType="slide" transparent onRequestClose={() => setViewing(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Entry Details</Text>
+              <TouchableOpacity onPress={() => setViewing(null)} style={styles.modalCloseBtn}>
+                <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+              {viewing ? (
+                <>
+                  {/* Customer header */}
+                  <View style={styles.viewHeader}>
+                    <View style={styles.viewIconWrap}>
+                      <UserPlus size={28} color={MD3Colors.onPrimaryContainer} strokeWidth={2.2} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.viewName}>{viewing.customer_name}</Text>
+                      {viewing.mobile ? (
+                        <View style={styles.viewPhoneRow}>
+                          <Phone size={13} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
+                          <Text style={styles.viewPhoneText}>{viewing.mobile}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Status badges */}
+                  <View style={styles.viewBadgesRow}>
+                    {viewing.payment_status ? (
+                      <View style={[styles.viewBadge, { backgroundColor: statusBadge(viewing.payment_status).bg }]}>
+                        <Text style={[styles.viewBadgeText, { color: statusBadge(viewing.payment_status).color }]}>
+                          {viewing.payment_status}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {viewing.payment_mode ? (
+                      <View style={[styles.viewBadge, { backgroundColor: MD3Colors.secondaryContainer }]}>
+                        <CreditCard size={12} color={MD3Colors.onSecondaryContainer} strokeWidth={2.2} />
+                        <Text style={[styles.viewBadgeText, { color: MD3Colors.onSecondaryContainer }]}>{viewing.payment_mode}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* Amount gradient card */}
+                  <LinearGradient
+                    colors={['#1565C0', '#0D47A1']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.viewAmountCard}
+                  >
+                    <View style={styles.viewAmountRow}>
+                      <View style={styles.viewAmountItem}>
+                        <Text style={styles.viewAmountLabel}>Bill Amount</Text>
+                        <Text style={styles.viewAmountValue}>{fmt(viewing.bill_amount ?? 0)}</Text>
+                      </View>
+                      <View style={styles.viewAmountDivider} />
+                      <View style={styles.viewAmountItem}>
+                        <Text style={styles.viewAmountLabel}>Paid</Text>
+                        <Text style={styles.viewAmountValue}>{fmt(viewing.paid_amount ?? 0)}</Text>
+                      </View>
+                      <View style={styles.viewAmountDivider} />
+                      <View style={styles.viewAmountItem}>
+                        <Text style={styles.viewAmountLabel}>Balance</Text>
+                        <Text style={styles.viewAmountValue}>{fmt(viewing.balance_amount ?? 0)}</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+
+                  {/* Detail rows */}
+                  <View style={styles.viewDetailCard}>
+                    <View style={styles.viewDetailRow}>
+                      <Receipt size={18} color={MD3Colors.primary} strokeWidth={2.2} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.viewDetailLabel}>Bill Number</Text>
+                        <Text style={styles.viewDetailValue}>{viewing.bill_no || '—'}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.viewDetailDivider} />
+                    <View style={styles.viewDetailRow}>
+                      <Clock size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.viewDetailLabel}>Date</Text>
+                        <Text style={styles.viewDetailValue}>
+                          {viewing.created_at ? new Date(viewing.created_at).toLocaleString() : '—'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Notes */}
+                  {viewing.notes ? (
+                    <View style={styles.viewDetailCard}>
+                      <View style={styles.viewDetailRow}>
+                        <FileText size={18} color={MD3Colors.tertiary} strokeWidth={2.2} />
+                        <Text style={styles.viewDetailLabel}>Notes</Text>
+                      </View>
+                      <Text style={styles.viewNotesText}>{viewing.notes}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Photos */}
+                  {(viewing.bill_photo || viewing.payment_photo) ? (
+                    <View style={styles.viewDetailCard}>
+                      <View style={styles.viewDetailRow}>
+                        <ImageIcon size={18} color={MD3Colors.warning} strokeWidth={2.2} />
+                        <Text style={styles.viewDetailLabel}>Photos</Text>
+                      </View>
+                      <View style={styles.viewPhotosRow}>
+                        {viewing.bill_photo ? (
+                          <View style={styles.viewPhotoWrap}>
+                            <Image source={{ uri: viewing.bill_photo }} style={styles.viewPhoto} />
+                            <Text style={styles.viewPhotoCaption}>Bill Photo</Text>
+                          </View>
+                        ) : null}
+                        {viewing.payment_photo ? (
+                          <View style={styles.viewPhotoWrap}>
+                            <Image source={{ uri: viewing.payment_photo }} style={styles.viewPhoto} />
+                            <Text style={styles.viewPhotoCaption}>Payment Photo</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
-  label: { fontFamily: 'Roboto-Medium', color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.xs },
-  balance: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
-  inputLabelSmall: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 6 },
-  pill: { borderRadius: MD3Radius.full, borderWidth: 1, borderColor: MD3Colors.outline, padding: 10, alignItems: 'center', backgroundColor: MD3Colors.surface },
-  pillText: { fontFamily: 'Roboto-Medium', color: MD3Colors.onSurface },
-  imageButton: { padding: 10, borderRadius: MD3Radius.sm, borderWidth: 1.2, borderColor: MD3Colors.outline, backgroundColor: MD3Colors.surface, alignItems: 'center' },
-  preview: { width: '100%', height: 110, marginTop: MD3Spacing.sm, borderRadius: MD3Radius.sm },
-  sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 18, color: MD3Colors.onSurface, marginBottom: MD3Spacing.sm },
-  entryTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface },
-  entrySub: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginTop: 4 },
-  entrySubSmall: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
-  actionBtn: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: MD3Colors.surfaceVariant, borderRadius: 8, marginLeft: 8 },
-  actionText: { fontFamily: 'Roboto-Medium', color: MD3Colors.onSurface },
-  deleteBtn: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: MD3Colors.errorContainer, borderRadius: 8, marginLeft: 8 },
-  deleteText: { fontFamily: 'Roboto-Medium', color: MD3Colors.error },
-  entryViewTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
-  notes: { fontFamily: 'Roboto-Regular', color: MD3Colors.onSurfaceVariant, marginTop: 6 },
-  viewImage: { width: 160, height: 160, borderRadius: MD3Radius.sm },
+  // ===== FORM CARD =====
+  formCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.lg,
+    marginBottom: MD3Spacing.lg,
+    ...MD3Elevation.level2,
+  },
+  formHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.lg },
+  formIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: MD3Colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: MD3Spacing.md,
+  },
+  formTitle: { fontFamily: 'Roboto-Bold', fontSize: 18, color: MD3Colors.onSurface },
+  formSubtitle: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginTop: 2 },
+  cancelEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: MD3Colors.surfaceVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowInputs: { flexDirection: 'row' },
+  balanceWrap: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: MD3Colors.primaryContainer,
+    borderRadius: MD3Radius.md,
+    paddingHorizontal: MD3Spacing.md,
+    paddingVertical: MD3Spacing.md,
+    marginTop: MD3Spacing.xs,
+    marginBottom: MD3Spacing.md,
+  },
+  balanceLeft: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm },
+  balanceLabel: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onPrimaryContainer, fontWeight: '600' },
+  balanceValue: { fontFamily: 'Roboto-Bold', fontSize: 22, color: MD3Colors.onPrimaryContainer },
+  fieldLabel: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 13,
+    color: MD3Colors.onSurfaceVariant,
+    marginBottom: MD3Spacing.xs,
+    marginTop: MD3Spacing.xs,
+    fontWeight: '600',
+  },
+  chipRow: { flexDirection: 'row', marginBottom: MD3Spacing.md, gap: MD3Spacing.sm },
+  chip: {
+    paddingVertical: MD3Spacing.sm,
+    paddingHorizontal: MD3Spacing.lg,
+    borderRadius: MD3Radius.full,
+    borderWidth: 2,
+    borderColor: MD3Colors.outline,
+    backgroundColor: MD3Colors.surface,
+  },
+  chipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
+  chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
+  chipTextSelected: { color: MD3Colors.onPrimary },
+  // dynamic status chip colors handled inline
+  imageButton: {
+    borderRadius: MD3Radius.md,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: MD3Colors.outlineVariant,
+    backgroundColor: MD3Colors.surfaceVariant,
+    minHeight: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  preview: { width: '100%', height: 90, borderRadius: MD3Radius.md },
+  imagePlaceholder: { justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.md },
+  imagePlaceholderText: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 11,
+    color: MD3Colors.onSurfaceVariant,
+    marginTop: 6,
+  },
+  removeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: MD3Spacing.xs,
+    paddingVertical: 4,
+  },
+  removeBtnText: { fontFamily: 'Roboto-Medium', fontSize: 11, color: MD3Colors.error, fontWeight: '600' },
+  formActions: { flexDirection: 'row', marginTop: MD3Spacing.lg },
+  // ===== SECTION HEADER =====
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
+  sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 18, color: MD3Colors.onSurface },
+  countBadge: {
+    backgroundColor: MD3Colors.primary,
+    borderRadius: MD3Radius.full,
+    paddingHorizontal: MD3Spacing.md,
+    paddingVertical: 2,
+    marginLeft: MD3Spacing.sm,
+  },
+  countBadgeText: { fontFamily: 'Roboto-Bold', fontSize: 12, color: MD3Colors.onPrimary },
+  // ===== ENTRY CARDS =====
+  entryCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level2,
+    overflow: 'hidden',
+  },
+  entryCardHeader: { flexDirection: 'row', padding: MD3Spacing.md },
+  entryIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: MD3Colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: MD3Spacing.md,
+    marginTop: 2,
+  },
+  entryInfo: { flex: 1 },
+  entryTitle: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onSurface, marginBottom: 2 },
+  entryMeta: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginBottom: 6 },
+  entryStatsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: MD3Colors.surfaceVariant,
+    borderRadius: MD3Radius.sm,
+    paddingHorizontal: MD3Spacing.sm,
+    paddingVertical: 3,
+  },
+  statValue: { fontFamily: 'Roboto-Bold', fontSize: 11, color: MD3Colors.onSurface },
+  entryBadges: { alignItems: 'flex-end', gap: 4 },
+  statusBadgeSmall: { borderRadius: MD3Radius.sm, paddingHorizontal: MD3Spacing.sm, paddingVertical: 3 },
+  statusBadgeSmallText: { fontFamily: 'Roboto-Medium', fontSize: 10, fontWeight: '700' },
+  entryDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: MD3Spacing.md,
+    paddingBottom: MD3Spacing.sm,
+  },
+  entryDateText: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.outline },
+  entryCardActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: MD3Colors.outlineVariant,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: MD3Spacing.sm + 2,
+    gap: 6,
+  },
+  actionDivider: { width: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.xs },
+  actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, fontWeight: '600' },
+  // ===== VIEW MODAL =====
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: MD3Colors.surface,
+    borderTopLeftRadius: MD3Radius.xxl,
+    borderTopRightRadius: MD3Radius.xxl,
+    maxHeight: '93%',
+    ...MD3Elevation.level5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: MD3Spacing.lg,
+    paddingVertical: MD3Spacing.md,
+    borderBottomWidth: 1.5,
+    borderBottomColor: MD3Colors.outlineVariant,
+  },
+  modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: MD3Colors.surfaceVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: { padding: MD3Spacing.lg },
+  viewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: MD3Spacing.md },
+  viewIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: MD3Colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: MD3Spacing.md,
+  },
+  viewName: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
+  viewPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  viewPhoneText: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurfaceVariant },
+  viewBadgesRow: { flexDirection: 'row', gap: MD3Spacing.sm, marginBottom: MD3Spacing.md, flexWrap: 'wrap' },
+  viewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: MD3Radius.sm,
+    paddingHorizontal: MD3Spacing.md,
+    paddingVertical: 5,
+  },
+  viewBadgeText: { fontFamily: 'Roboto-Medium', fontSize: 12, fontWeight: '700' },
+  viewAmountCard: {
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.lg,
+    marginBottom: MD3Spacing.md,
+    ...MD3Elevation.level3,
+  },
+  viewAmountRow: { flexDirection: 'row', alignItems: 'center' },
+  viewAmountItem: { flex: 1, alignItems: 'center' },
+  viewAmountLabel: { fontFamily: 'Roboto-Regular', fontSize: 11, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
+  viewAmountValue: { fontFamily: 'Roboto-Bold', fontSize: 16, color: '#FFFFFF' },
+  viewAmountDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.25)' },
+  viewDetailCard: {
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.md,
+    marginBottom: MD3Spacing.md,
+    borderWidth: 1.5,
+    borderColor: MD3Colors.outlineVariant,
+  },
+  viewDetailRow: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.md },
+  viewDetailLabel: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
+  viewDetailValue: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurface, marginTop: 2 },
+  viewDetailDivider: { height: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.sm },
+  viewNotesText: {
+    fontFamily: 'Roboto-Regular',
+    fontSize: 13,
+    color: MD3Colors.onSurface,
+    marginTop: MD3Spacing.sm,
+    lineHeight: 20,
+  },
+  viewPhotosRow: { flexDirection: 'row', gap: MD3Spacing.md, marginTop: MD3Spacing.sm },
+  viewPhotoWrap: { alignItems: 'center' },
+  viewPhoto: { width: 140, height: 140, borderRadius: MD3Radius.md },
+  viewPhotoCaption: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 11,
+    color: MD3Colors.onSurfaceVariant,
+    marginTop: 6,
+  },
 });
+
+// Helper for dynamic status chip styles — appended after StyleSheet to keep logic clean
+function chipStatusSelected(s: string) {
+  if (s === 'Paid') return { backgroundColor: MD3Colors.success, borderColor: MD3Colors.success };
+  if (s === 'Partial') return { backgroundColor: MD3Colors.warning, borderColor: MD3Colors.warning };
+  return { backgroundColor: MD3Colors.error, borderColor: MD3Colors.error };
+}
+function chipStatusTextSelected(s: string) {
+  return { color: MD3Colors.onPrimary };
+}
