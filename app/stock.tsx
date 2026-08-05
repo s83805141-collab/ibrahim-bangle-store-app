@@ -10,6 +10,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -280,7 +282,7 @@ function StockAdjustModal({ product, onClose, onSaved }: { product: ProductWithD
 
   return (
     <Modal visible={!!product} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <View>
@@ -291,7 +293,7 @@ function StockAdjustModal({ product, onClose, onSaved }: { product: ProductWithD
               <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
             <LinearGradient
               colors={(isIncrease ? MD3Gradients.save : MD3Gradients.delete) as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
@@ -347,12 +349,12 @@ function StockAdjustModal({ product, onClose, onSaved }: { product: ProductWithD
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
-          <View style={styles.modalFooter}>
+          <View style={styles.modalStickyFooter}>
             <Button title="Cancel" variant="outlined" onPress={handleClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
             <Button title="Save Adjustment" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -418,4 +420,5 @@ const styles = StyleSheet.create({
   unitChipTextSelected: { color: MD3Colors.onPrimary },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
+  modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, backgroundColor: MD3Colors.surface, position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 24, ...MD3Elevation.level3 },
 });

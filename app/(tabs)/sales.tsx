@@ -1,18 +1,20 @@
-import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image } from 'react-native';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Plus, Trash2, ShoppingCart, X, Search, AlertTriangle, FileText, ChevronDown, ChevronUp, Camera } from 'lucide-react-native';
+import { Plus, Trash2, ShoppingCart, X, Search, AlertTriangle, FileText, ChevronDown, ChevronUp, Camera, MessageCircle, Share2, Printer, CheckCircle2, MessageSquare } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, FadeInUp } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 import {
   getAllSales, getAllCustomersFull, getAllProducts, addSale, deleteSale, generateInvoiceNumber,
+  getSettings, getSaleById,
   UNITS, PAYMENT_METHODS,
-  CustomerWithStats, ProductWithDetails, SaleHeaderWithDetails, SaleItemInput, SaleHeader,
+  CustomerWithStats, ProductWithDetails, SaleHeaderWithDetails, SaleItemInput, SaleHeader, ShopSettings,
 } from '@/lib/db/repo';
 import type { Unit, PaymentMethod } from '@/lib/db/schema';
 import { Button, Input, EmptyState, ScreenHeader, FAB, StatusBadge } from '@/components/ui';
+import { shareOnWhatsApp, sendSMS, shareInvoice, generateInvoiceText } from '@/lib/invoiceUtils';
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -22,10 +24,14 @@ export default function SalesScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailSale, setDetailSale] = useState<SaleHeaderWithDetails | null>(null);
+  const [successSale, setSuccessSale] = useState<SaleHeaderWithDetails | null>(null);
+  const [shopSettings, setShopSettings] = useState<ShopSettings | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setSales(await getAllSales());
+      const [s, sett] = await Promise.all([getAllSales(), getSettings()]);
+      setSales(s);
+      setShopSettings(sett);
     } finally {
       setLoading(false);
     }
@@ -90,13 +96,14 @@ export default function SalesScreen() {
 
       <FAB onPress={() => setModalVisible(true)} intent="add" icon={Plus} />
 
-      <SaleFormModal visible={modalVisible} onClose={() => setModalVisible(false)} onSaved={() => { setModalVisible(false); load(); }} />
+      <SaleFormModal visible={modalVisible} onClose={() => setModalVisible(false)} onSaved={(savedId) => { setModalVisible(false); load(); if (savedId && shopSettings) { getSaleById(savedId).then(s => { if (s) setSuccessSale(s); }); } }} />
       <SaleDetailModal sale={detailSale} onClose={() => setDetailSale(null)} formatRs={formatRs} formatDate={formatDate} />
+      <SaleSuccessModal sale={successSale} settings={shopSettings} onClose={() => setSuccessSale(null)} />
     </View>
   );
 }
 
-function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClose: () => void; onSaved: () => void }) {
+function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClose: () => void; onSaved: (saleId?: number) => void }) {
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -233,8 +240,8 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
         reference_number: referenceNumber.trim(),
         payment_screenshot: paymentScreenshot,
       };
-      await addSale(header, items);
-      onSaved();
+      const savedId = await addSale(header, items);
+      onSaved(savedId);
     } catch (e: any) {
       setError(e.message || 'Failed to save sale');
     } finally {
@@ -249,13 +256,16 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.modalOverlay}
+      >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>New Sale</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 120 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }} keyboardShouldPersistTaps="handled">
             <View style={styles.rowInputs}>
               <Input label="Invoice #" value={invoiceNumber} onChangeText={setInvoiceNumber} placeholder="Auto" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
               <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={{ flex: 1 }} />
@@ -459,12 +469,12 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
             <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
-          <View style={styles.modalFooter}>
+          <View style={styles.modalStickyFooter}>
             <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
             <Button title="Save Sale" intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -517,6 +527,52 @@ function SaleDetailModal({ sale, onClose, formatRs, formatDate }: { sale: SaleHe
 }
 
 function formatRs(n: number) { return 'Rs ' + (n || 0).toLocaleString('en-PK'); }
+
+function SaleSuccessModal({ sale, settings, onClose }: { sale: SaleHeaderWithDetails | null; settings: ShopSettings | null; onClose: () => void }) {
+  if (!sale) return null;
+  const customerPhone = sale.customer_phone || '';
+  return (
+    <Modal visible={!!sale} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={styles.successOverlay}>
+        <Animated.View entering={FadeInUp.duration(300)} style={styles.successCard}>
+          <View style={styles.successIconWrap}>
+            <CheckCircle2 size={48} color={MD3Colors.success} strokeWidth={2.2} />
+          </View>
+          <Text style={styles.successTitle}>Sale Saved!</Text>
+          <Text style={styles.successSubtitle}>Invoice #{sale.invoice_number}</Text>
+          <Text style={styles.successAmount}>{formatRs(sale.grand_total)}</Text>
+          {sale.balance_due > 0 ? (
+            <View style={styles.successDueBadge}>
+              <Text style={styles.successDueText}>Balance Due: {formatRs(sale.balance_due)}</Text>
+            </View>
+          ) : (
+            <View style={styles.successPaidBadge}>
+              <Text style={styles.successPaidText}>Fully Paid</Text>
+            </View>
+          )}
+          <Text style={styles.successShareLabel}>Share Invoice:</Text>
+          <View style={styles.successActions}>
+            <TouchableOpacity style={styles.successActionBtn} onPress={() => shareOnWhatsApp(sale, settings || { shop_name: 'Ibrahim Bangle Store', shop_address: '', shop_phone: '', shop_footer: '' }, customerPhone)}>
+              <View style={[styles.successActionIcon, { backgroundColor: '#25D366' }]}><MessageCircle size={22} color="#FFFFFF" strokeWidth={2.2} /></View>
+              <Text style={styles.successActionText}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.successActionBtn} onPress={() => sendSMS(sale, settings || { shop_name: 'Ibrahim Bangle Store', shop_address: '', shop_phone: '', shop_footer: '' }, customerPhone)}>
+              <View style={[styles.successActionIcon, { backgroundColor: MD3Colors.primary }]}><MessageSquare size={22} color="#FFFFFF" strokeWidth={2.2} /></View>
+              <Text style={styles.successActionText}>SMS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.successActionBtn} onPress={() => shareInvoice(sale, settings || { shop_name: 'Ibrahim Bangle Store', shop_address: '', shop_phone: '', shop_footer: '' })}>
+              <View style={[styles.successActionIcon, { backgroundColor: MD3Colors.secondary }]}><Share2 size={22} color="#FFFFFF" strokeWidth={2.2} /></View>
+              <Text style={styles.successActionText}>Share</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.successFooter}>
+            <Button title="Close" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: MD3Colors.background },
@@ -590,6 +646,7 @@ const styles = StyleSheet.create({
   balanceDueRow: { backgroundColor: MD3Colors.errorContainer, borderRadius: MD3Radius.md, paddingHorizontal: MD3Spacing.sm, paddingVertical: MD3Spacing.sm },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
+  modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, backgroundColor: MD3Colors.surface, position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 24, ...MD3Elevation.level3 },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: MD3Spacing.sm, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
   detailLabel: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant },
   detailValue: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface },
@@ -610,4 +667,20 @@ const styles = StyleSheet.create({
   screenshotText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.onSurfaceVariant, marginTop: 4 },
   screenshotRemove: { alignSelf: 'flex-start', padding: MD3Spacing.xs, marginBottom: MD3Spacing.sm },
   screenshotRemoveText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.error },
+  successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: MD3Spacing.lg },
+  successCard: { width: '100%', maxWidth: 400, backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.xxl, padding: MD3Spacing.xl, alignItems: 'center', ...MD3Elevation.level5 },
+  successIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: MD3Colors.successContainer, justifyContent: 'center', alignItems: 'center', marginBottom: MD3Spacing.md },
+  successTitle: { fontFamily: 'Roboto-Bold', fontSize: 24, color: MD3Colors.onSurface, marginBottom: 4 },
+  successSubtitle: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant, marginBottom: 8 },
+  successAmount: { fontFamily: 'Roboto-Bold', fontSize: 32, color: MD3Colors.primary, marginBottom: 12 },
+  successDueBadge: { backgroundColor: MD3Colors.errorContainer, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.xs, marginBottom: 16 },
+  successDueText: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.error },
+  successPaidBadge: { backgroundColor: MD3Colors.successContainer, borderRadius: MD3Radius.full, paddingHorizontal: MD3Spacing.md, paddingVertical: MD3Spacing.xs, marginBottom: 16 },
+  successPaidText: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.success },
+  successShareLabel: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, marginBottom: MD3Spacing.sm, fontWeight: '600' },
+  successActions: { flexDirection: 'row', justifyContent: 'center', gap: MD3Spacing.md, marginBottom: MD3Spacing.lg },
+  successActionBtn: { alignItems: 'center', gap: 6 },
+  successActionIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center', ...MD3Elevation.level2 },
+  successActionText: { fontFamily: 'Roboto-Medium', fontSize: 11, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
+  successFooter: { flexDirection: 'row', width: '100%', marginTop: MD3Spacing.sm },
 });

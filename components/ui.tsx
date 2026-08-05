@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
   Pressable,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -301,7 +302,7 @@ export function PremiumModal({
 }) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
         <Animated.View entering={SlideInDown.duration(300)} style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
@@ -309,12 +310,12 @@ export function PremiumModal({
               <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
             </Pressable>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
             {children}
           </ScrollView>
-          {footer ? <View style={styles.modalFooter}>{footer}</View> : null}
+          {footer ? <View style={styles.modalStickyFooter}>{footer}</View> : null}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -454,6 +455,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderTopColor: MD3Colors.outlineVariant,
     gap: MD3Spacing.sm,
+  },
+  modalStickyFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: MD3Spacing.lg,
+    paddingVertical: MD3Spacing.md,
+    borderTopWidth: 1.5,
+    borderTopColor: MD3Colors.outlineVariant,
+    gap: MD3Spacing.sm,
+    backgroundColor: MD3Colors.surface,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 24,
+    ...MD3Elevation.level3,
   },
   statusBadge: {
     borderRadius: MD3Radius.sm,

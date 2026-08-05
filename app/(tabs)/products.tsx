@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Pencil, Trash2, Search, Package, X, AlertTriangle, ChevronDown } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -262,13 +262,13 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{product ? 'Edit Product' : 'Add Product'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
             <Input label="Product Name *" value={name} onChangeText={setName} placeholder="e.g. Red Toda 2-6" />
             <View style={styles.rowInputs}>
               <Input label="Design Number" value={designNumber} onChangeText={setDesignNumber} placeholder="e.g. D-1024" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
@@ -366,12 +366,12 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
-          <View style={styles.modalFooter}>
+          <View style={styles.modalStickyFooter}>
             <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
             <Button title={product ? 'Update' : 'Save'} intent={product ? 'update' : 'save'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -422,4 +422,5 @@ const styles = StyleSheet.create({
   advancedToggleText: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
+  modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, backgroundColor: MD3Colors.surface, position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 24, ...MD3Elevation.level3 },
 });

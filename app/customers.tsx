@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Users, Pencil, Trash2, X, Phone, MessageCircle, MapPin, BookOpen, Wallet, Camera, UserCircle2 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -142,13 +142,13 @@ function CustomerFormModal({ visible, editing, onClose, onSaved }: { visible: bo
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{editing ? 'Edit Customer' : 'Add Customer'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
             <View style={styles.photoWrap}>
               <TouchableOpacity onPress={pickPhoto} style={styles.photoBtn}>
                 {photo ? (
@@ -184,12 +184,12 @@ function CustomerFormModal({ visible, editing, onClose, onSaved }: { visible: bo
             <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" multiline />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
-          <View style={styles.modalFooter}>
+          <View style={styles.modalStickyFooter}>
             <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
             <Button title={editing ? 'Update' : 'Add Customer'} intent={editing ? 'update' : 'add'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -225,6 +225,7 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: MD3Colors.onPrimary },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
+  modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, backgroundColor: MD3Colors.surface, position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 24, ...MD3Elevation.level3 },
   photoWrap: { alignItems: 'center', marginBottom: MD3Spacing.md },
   photoBtn: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', borderWidth: 2, borderColor: MD3Colors.outlineVariant },
   photoImg: { width: '100%', height: '100%' },
