@@ -332,7 +332,7 @@ export const SEED_CATEGORIES = [
   'Fancy Bangles',
 ];
 
-export const UNITS = ['Box', 'Dozen', 'Piece'] as const;
+export const UNITS = ['Box', 'Dozen'] as const;
 export type Unit = (typeof UNITS)[number];
 
 export const PAYMENT_METHODS = ['Cash', 'UPI', 'Bank'] as const;
