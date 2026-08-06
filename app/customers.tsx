@@ -48,7 +48,7 @@ export default function CustomersScreen() {
             <View style={styles.card}>
               <TouchableOpacity
                 style={styles.cardHeader}
-                onPress={() => router.push({ pathname: '/customer-ledger', params: { customerId: String(item.id) } })}
+                onPress={() => router.push({ pathname: '/customer-profile', params: { id: String(item.id) } })}
               >
                 <View style={styles.cardIconWrap}><Users size={22} color={MD3Colors.error} strokeWidth={2.2} /></View>
                 <View style={styles.cardInfo}>

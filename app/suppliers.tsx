@@ -43,7 +43,7 @@ export default function SuppliersScreen() {
             <View style={styles.card}>
               <TouchableOpacity
                 style={styles.cardHeader}
-                onPress={() => router.push({ pathname: '/supplier-ledger', params: { supplierId: String(item.id) } })}
+                onPress={() => router.push({ pathname: '/supplier-profile', params: { id: String(item.id) } })}
               >
                 <View style={styles.cardIconWrap}><Truck size={22} color={MD3Colors.secondary} strokeWidth={2.2} /></View>
                 <View style={styles.cardInfo}>

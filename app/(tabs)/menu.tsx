@@ -3,13 +3,15 @@ import { useRouter } from 'expo-router';
 import {
   Tag, Users, Truck, ShoppingCart, Wallet, FileText, Boxes,
   BarChart3, DatabaseBackup, Settings, ClipboardList, BookOpen, Landmark,
-  ChevronRight,
+  ChevronRight, Search, History,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui';
 
 const MENU_ITEMS = [
+  { title: 'Global Search', subtitle: 'Search everything instantly', icon: Search, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/global-search' },
+  { title: 'Invoice History', subtitle: 'All sales & purchase invoices', icon: History, color: MD3Colors.tertiary, bg: MD3Colors.tertiaryContainer, route: '/invoice-history' },
   { title: 'Categories', subtitle: 'Manage bangle categories', icon: Tag, color: MD3Colors.tertiary, bg: MD3Colors.tertiaryContainer, route: '/categories' },
   { title: 'Suppliers', subtitle: 'Manage suppliers', icon: Truck, color: MD3Colors.secondary, bg: MD3Colors.secondaryContainer, route: '/suppliers' },
   { title: 'Customers', subtitle: 'Manage customers', icon: Users, color: MD3Colors.error, bg: MD3Colors.errorContainer, route: '/customers' },

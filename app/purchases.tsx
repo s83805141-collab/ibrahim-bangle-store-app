@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ClipboardList, X, ChevronDown, ChevronUp, Package, Search, Camera, ImageIcon } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -18,6 +18,7 @@ import { Button, Input, EmptyState, ScreenHeader, FAB, StatusBadge } from '@/com
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Cheque'] as const;
 
 export default function PurchasesScreen() {
+  const router = useRouter();
   const [purchases, setPurchases] = useState<PurchaseHeaderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -50,7 +51,7 @@ export default function PurchasesScreen() {
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>
             <View style={styles.card}>
-              <TouchableOpacity style={styles.cardHeader} onPress={() => setDetailPurchase(item)}>
+              <TouchableOpacity style={styles.cardHeader} onPress={() => router.push({ pathname: '/invoice-details', params: { type: 'purchase', id: String(item.id) } })}>
                 <View style={styles.cardIconWrap}><ClipboardList size={20} color={MD3Colors.accent} strokeWidth={2.2} /></View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardTitle}>{item.supplier_name}</Text>

@@ -61,7 +61,7 @@ export default function SalesScreen() {
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>
             <View style={styles.card}>
-              <TouchableOpacity style={styles.cardHeader} onPress={() => setDetailSale(item)}>
+              <TouchableOpacity style={styles.cardHeader} onPress={() => router.push({ pathname: '/invoice-details', params: { type: 'sale', id: String(item.id) } })}>
                 <View style={styles.cardIconWrap}><ShoppingCart size={20} color={MD3Colors.primary} strokeWidth={2.2} /></View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardTitle}>{item.invoice_number}</Text>

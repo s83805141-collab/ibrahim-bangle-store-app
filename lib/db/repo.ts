@@ -561,6 +561,21 @@ export async function getAllPurchases(): Promise<PurchaseHeaderWithDetails[]> {
   return purchases;
 }
 
+export async function getPurchaseById(id: number): Promise<PurchaseHeaderWithDetails | null> {
+  const db = await getDb();
+  const res = await db.exec(`
+    SELECT ph.*, s.name AS supplier_name
+    FROM purchase_headers ph
+    LEFT JOIN suppliers s ON ph.supplier_id = s.id
+    WHERE ph.id = ?
+  `, [id]);
+  if (res.rows.length === 0) return null;
+  const h = res.rows._array[0];
+  const items = await getPurchaseItems(id);
+  const payments = await getPaymentsByPurchase(id);
+  return { ...h, items, payments };
+}
+
 export async function getPurchaseItems(headerId: number): Promise<PurchaseItemDetail[]> {
   const db = await getDb();
   const res = await db.exec(`

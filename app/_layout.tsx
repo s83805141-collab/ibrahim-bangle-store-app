@@ -50,6 +50,11 @@ useEffect(() => {
   options={{ gestureEnabled: false }}
 />
   <Stack.Screen name="(tabs)" />
+  <Stack.Screen name="invoice-history" />
+  <Stack.Screen name="invoice-details" />
+  <Stack.Screen name="customer-profile" />
+  <Stack.Screen name="supplier-profile" />
+  <Stack.Screen name="global-search" />
   <Stack.Screen name="+not-found" />
 </Stack>
       <StatusBar style="dark" backgroundColor={MD3Colors.background} />
