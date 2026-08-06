@@ -107,6 +107,7 @@ export default function TransportRegisterScreen() {
   const [searching, setSearching] = useState(false);
   const [viewing, setViewing] = useState<TransportReceipt | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  const [dateText, setDateText] = useState(formatDateInput(todayTimestamp()));
 
   const loadData = useCallback(async () => {
     try {
@@ -163,8 +164,6 @@ export default function TransportRegisterScreen() {
       }
     } catch (error) {
       console.error('pickImage', error);
-      Alert.alert('Error', 'Image capture failed');
-    }
   }
 
   async function handleSave() {
@@ -176,18 +175,23 @@ export default function TransportRegisterScreen() {
       Alert.alert('Validation', 'Paid Amount is required and must be greater than 0');
       return;
     }
+    const saveData = {
+  ...form,
+  transport_date: parseDateInput(dateText),
+};
     setLoading(true);
     try {
       if (editingId) {
-        await updateTransportReceipt(editingId, form);
+        await updateTransportReceipt(editingId, saveData);
         Alert.alert('Updated', 'Receipt updated successfully');
       } else {
-        await insertTransportReceipt(form);
+        await insertTransportReceipt(saveData);
         Alert.alert('Saved', 'Transport receipt saved successfully');
       }
       setForm(emptyForm);
-      setEditingId(null);
-      await loadData();
+setDateText(formatDateInput(todayTimestamp()));
+setEditingId(null);
+await loadData();
     } catch (error) {
       console.error('handleSave', error);
       Alert.alert('Error', 'Unable to save receipt');
@@ -205,12 +209,14 @@ export default function TransportRegisterScreen() {
       amount: item.amount,
       receipt_image: item.receipt_image,
     });
+    setDateText(formatDateInput(item.transport_date));
     triggerHaptic();
   }
 
   function handleCancelEdit() {
-    setForm(emptyForm);
-    setEditingId(null);
+  setForm(emptyForm);
+  setDateText(formatDateInput(todayTimestamp()));
+  setEditingId(null);
   }
 
   function handleDelete(item: TransportReceipt) {
@@ -251,7 +257,9 @@ export default function TransportRegisterScreen() {
     } catch (error) {
       console.error('search', error);
     }
-  }
+  }      Alert.alert('Error', 'Image capture failed');
+    }
+
 
   const fmt = (n: number) => '\u20B9' + (Number(n) || 0).toFixed(2);
 
@@ -344,20 +352,20 @@ export default function TransportRegisterScreen() {
               <View style={styles.dateWrap}>
                 <Calendar size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
                 <TextInput
-                  style={styles.dateInput}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={MD3Colors.outline}
-                  value={formatDateInput(form.transport_date)}
-                  onChangeText={(t) => setField('transport_date', parseDateInput(t))}
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={MD3Colors.outline}
+                value={dateText}
+                onChangeText={setDateText}
                 />
-                <Text style={styles.dateDisplay}>{formatDate(form.transport_date)}</Text>
+                <Text style={styles.dateDisplay}>  {formatDate(parseDateInput(dateText))}</Text>
               </View>
 
               <Input
                 label="Paid Amount *"
                 value={String(form.amount || '')}
                 onChangeText={(t) => setField('amount', Number(t) || 0)}
-                placeholder="0"
+                plajceholder="0"
                 keyboardType="numeric"
               />
 
