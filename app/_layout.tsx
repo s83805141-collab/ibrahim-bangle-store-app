@@ -55,6 +55,7 @@ useEffect(() => {
   <Stack.Screen name="customer-profile" />
   <Stack.Screen name="supplier-profile" />
   <Stack.Screen name="global-search" />
+  <Stack.Screen name="transport-register" />
   <Stack.Screen name="+not-found" />
 </Stack>
       <StatusBar style="dark" backgroundColor={MD3Colors.background} />

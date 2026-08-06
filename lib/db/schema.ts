@@ -320,6 +320,19 @@ CREATE TABLE IF NOT EXISTS daily_customer_entries (
 );
 `;
 
+export const MIGRATION_SQL_4 = `
+CREATE TABLE IF NOT EXISTS transport_receipts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  driver_name TEXT NOT NULL,
+  mobile_number TEXT DEFAULT '',
+  transport_date INTEGER NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  receipt_image TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+`;
+
 export const SEED_CATEGORIES = [
   'Toda',
   'Plain Toda',

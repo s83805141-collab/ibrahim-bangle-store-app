@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import {
   Tag, Users, Truck, ShoppingCart, Wallet, FileText, Boxes,
   BarChart3, DatabaseBackup, Settings, ClipboardList, BookOpen, Landmark,
-  ChevronRight, Search, History,
+  ChevronRight, Search, History, Receipt,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
@@ -18,6 +18,7 @@ const MENU_ITEMS = [
   { title: 'Purchase Management', subtitle: 'Record stock purchases', icon: ClipboardList, color: MD3Colors.accent, bg: MD3Colors.accentContainer, route: '/purchases' },
   { title: 'Supplier Ledger', subtitle: 'Supplier payments & dues', icon: BookOpen, color: MD3Colors.secondary, bg: MD3Colors.secondaryContainer, route: '/supplier-ledger' },
   { title: 'Bank Accounts', subtitle: 'Manage bank & UPI accounts', icon: Landmark, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/bank-accounts' },
+  { title: 'Transport Register', subtitle: 'Save transport payment receipts', icon: Receipt, color: MD3Colors.accent, bg: MD3Colors.accentContainer, route: '/transport-register' },
   { title: 'Daily Customer', subtitle: 'Record daily customer bills', icon: Wallet, color: MD3Colors.primary, bg: MD3Colors.primaryContainer, route: '/daily-customer-entry' },
   { title: 'Customer Ledger', subtitle: 'Customer payments & dues', icon: BookOpen, color: MD3Colors.error, bg: MD3Colors.errorContainer, route: '/customer-ledger' },
   { title: 'Stock Management', subtitle: 'View & adjust inventory', icon: Boxes, color: MD3Colors.accent, bg: MD3Colors.accentContainer, route: '/stock' },

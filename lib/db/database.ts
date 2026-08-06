@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, SEED_CATEGORIES } from './schema';
+import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, SEED_CATEGORIES } from './schema';
 import type { DatabaseAdapter } from './types';
 
 // Platform-specific adapter creation. On web, we import a localStorage-backed
@@ -78,7 +78,7 @@ export async function resetDatabase(): Promise<void> {
       'supplier_payments', 'payment_proof_images', 'purchase_items',
       'sale_items', 'purchase_headers', 'sale_headers', 'product_variants',
       'products', 'supplier_ledger', 'customer_ledger', 'bank_accounts',
-      'suppliers', 'customers', 'categories','daily_customer_entries', 'settings',
+      'suppliers', 'customers', 'categories','daily_customer_entries', 'transport_receipts', 'settings',
     ];
     for (const t of allTables) {
       try {
@@ -96,7 +96,7 @@ export async function resetDatabase(): Promise<void> {
 // Run ALTER TABLE migrations safely. SQLite doesn't support "IF NOT EXISTS"
 // for ADD COLUMN, so we check the current columns via PRAGMA table_info.
 async function runMigration(db: DatabaseAdapter): Promise<void> {
-  for (const migration of [MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3]) {
+  for (const migration of [MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4]) {
     if (!migration || migration.trim().length === 0) continue;
     
     const statements = migration
@@ -158,7 +158,7 @@ export async function exportBackup(): Promise<string> {
       'purchase_headers', 'purchase_items', 'sale_headers', 'sale_items',
       'supplier_ledger', 'customer_ledger', 'supplier_payments', 'customer_payments',
       'payment_proof_images', 'customer_payment_images', 'bank_accounts',
-      'stock_movements','daily_customer_entries', 'settings',
+      'stock_movements','daily_customer_entries', 'transport_receipts', 'settings',
     ];
     const dump: Record<string, any[]> = {};
     for (const t of tables) {
