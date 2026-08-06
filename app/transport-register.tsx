@@ -164,6 +164,8 @@ export default function TransportRegisterScreen() {
       }
     } catch (error) {
       console.error('pickImage', error);
+      Alert.alert('Error', 'Image capture failed');
+  }
   }
 
   async function handleSave() {
@@ -257,8 +259,7 @@ await loadData();
     } catch (error) {
       console.error('search', error);
     }
-  }      Alert.alert('Error', 'Image capture failed');
-    }
+  
 
 
   const fmt = (n: number) => '\u20B9' + (Number(n) || 0).toFixed(2);
