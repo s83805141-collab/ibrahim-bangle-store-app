@@ -259,6 +259,7 @@ await loadData();
     } catch (error) {
       console.error('search', error);
     }
+  }
   
 
 
@@ -366,7 +367,7 @@ await loadData();
                 label="Paid Amount *"
                 value={String(form.amount || '')}
                 onChangeText={(t) => setField('amount', Number(t) || 0)}
-                plajceholder="0"
+                placeholder="0"
                 keyboardType="numeric"
               />
 
