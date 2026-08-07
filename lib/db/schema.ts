@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS purchase_headers (
   remaining_balance REAL NOT NULL DEFAULT 0,
   payment_method TEXT DEFAULT 'Cash',
   transaction_number TEXT DEFAULT '',
+  payment_slip TEXT DEFAULT '',
   note TEXT,
   created_at INTEGER NOT NULL,
   FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
