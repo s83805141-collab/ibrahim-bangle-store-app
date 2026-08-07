@@ -14,6 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import {
@@ -161,8 +162,30 @@ export default function TransportRegisterScreen() {
         });
       }
       if ((res as any).assets && (res as any).assets.length > 0) {
-        setField('receipt_image', (res as any).assets[0].uri);
-        triggerHaptic();
+  const sourceUri = (res as any).assets[0].uri;
+
+  const folder = FileSystem.documentDirectory + 'transport_receipts/';
+
+  const folderInfo = await FileSystem.getInfoAsync(folder);
+
+  if (!folderInfo.exists) {
+    await FileSystem.makeDirectoryAsync(folder, {
+      intermediates: true,
+    });
+  }
+
+  const ext = sourceUri.split('.').pop() || 'jpg';
+
+  const destUri = folder + `receipt_${Date.now()}.${ext}`;
+
+  await FileSystem.copyAsync({
+    from: sourceUri,
+    to: destUri,
+  });
+
+  setField('receipt_image', destUri);
+
+  triggerHaptic();
       }
     } catch (error) {
       console.error('pickImage', error);
