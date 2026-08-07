@@ -58,7 +58,7 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Settings" subtitle="Shop information & preferences" />
-      <ScrollView contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}>
         {/* Shop Information Section */}
         <Animated.View entering={FadeInDown.duration(300).delay(0)} style={styles.section}>
           <View style={styles.sectionHeader}>

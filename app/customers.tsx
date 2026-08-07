@@ -41,7 +41,7 @@ export default function CustomersScreen() {
         data={customers}
         keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
         ListEmptyComponent={<EmptyState icon={<Users size={48} color={MD3Colors.outline} />} title="No customers yet" subtitle="Tap + to add a customer" />}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>

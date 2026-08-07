@@ -29,12 +29,14 @@ import {
 } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { getDashboardStats } from '@/lib/db/repo';
 import { ScreenHeader, Button } from '@/components/ui';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAmounts, setShowAmounts] = useState(false);
@@ -61,7 +63,7 @@ export default function DashboardScreen() {
     <>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 80 + insets.bottom }]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
       >
         <ScreenHeader title="Ibrahim Bangle Store" subtitle="Wholesale & Retail Inventory" />
@@ -193,11 +195,11 @@ export default function DashboardScreen() {
 
 function StatCard({ icon, label, value, color, small, onPress, delay }: { icon: React.ReactNode; label: string; value: any; color: string; small?: boolean; onPress?: () => void; delay?: number }) {
   return (
-    <Pressable onPress={onPress} disabled={!onPress}>
+    <Pressable onPress={onPress} disabled={!onPress} style={styles.statCardOuter}>
       <Animated.View entering={FadeInDown.duration(300).delay(delay || 0)} style={styles.statCard}>
         <View style={[styles.statIconWrap, { backgroundColor: color }]}>{icon}</View>
-        <Text style={styles.statValue} numberOfLines={small ? 2 : 1}>{small ? value : String(value)}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.statValue} numberOfLines={small ? 2 : 1} adjustsFontSizeToFit={small} minimumFontScale={0.65}>{small ? value : String(value)}</Text>
+        <Text style={styles.statLabel} numberOfLines={2} adjustsFontSizeToFit>{label}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -223,17 +225,19 @@ const styles = StyleSheet.create({
   welcomeSubtitle: { fontFamily: 'Roboto-Regular', fontSize: 14, color: 'rgba(255,255,255,0.85)' },
   welcomeIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.18)', justifyContent: 'center', alignItems: 'center' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  statCardOuter: { width: '48.5%', marginBottom: MD3Spacing.sm },
   statCard: {
-    width: '48%',
+    flex: 1,
+    minHeight: 140,
     backgroundColor: MD3Colors.surface,
     borderRadius: MD3Radius.lg,
-    padding: MD3Spacing.md,
-    marginBottom: MD3Spacing.sm,
+    padding: MD3Spacing.sm + 2,
+    justifyContent: 'space-between',
     ...MD3Elevation.level2,
   },
-  statIconWrap: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: MD3Spacing.sm },
-  statValue: { fontFamily: 'Roboto-Bold', fontSize: 22, color: MD3Colors.onSurface, marginBottom: 2 },
-  statLabel: { fontFamily: 'Roboto-Regular', fontSize: 12, color: MD3Colors.onSurfaceVariant },
+  statIconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: MD3Spacing.xs },
+  statValue: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface, marginBottom: 2, flexShrink: 1, flex: 1 },
+  statLabel: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, lineHeight: 14, flexShrink: 1 },
   sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface, marginTop: MD3Spacing.md, marginBottom: MD3Spacing.sm },
   transactionsCard: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, ...MD3Elevation.level2 },
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: MD3Spacing.sm + 2 },

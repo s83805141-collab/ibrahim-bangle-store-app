@@ -264,7 +264,7 @@ export default function ReportsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
         {/* Gradient summary banner */}
         <Animated.View entering={FadeIn.duration(400)}>
           <LinearGradient colors={summaryGradient as [string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summaryBanner}>

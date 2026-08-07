@@ -164,7 +164,7 @@ export default function StockScreen() {
         data={tab === 'history' ? movements : (tab === 'lowstock' ? [...outOfStock, ...lowStock] : filteredProducts)}
         keyExtractor={(item: any) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
         ListEmptyComponent={
           tab === 'history' ? (
             <EmptyState icon={<History size={48} color={MD3Colors.outline} />} title="No stock movements" subtitle="Stock changes will appear here" />

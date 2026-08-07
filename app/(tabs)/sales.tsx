@@ -56,7 +56,7 @@ export default function SalesScreen() {
         data={sales}
         keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
         ListEmptyComponent={<EmptyState icon={<ShoppingCart size={48} color={MD3Colors.outline} />} title="No sales yet" subtitle="Tap + to create a new sale" />}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.duration(250).delay(index * 50)}>

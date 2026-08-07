@@ -576,7 +576,7 @@ export default function DailyCustomerEntryScreen() {
                 <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
               {viewing ? (
                 <>
                   {/* Customer header */}

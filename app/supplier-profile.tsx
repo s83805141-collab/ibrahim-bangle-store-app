@@ -73,7 +73,7 @@ export default function SupplierProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 140 }}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
     >
       <View style={styles.toolbar}>

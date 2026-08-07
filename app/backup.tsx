@@ -80,7 +80,7 @@ export default function BackupScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Backup & Restore" subtitle="Export & import your offline data" />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}>
         {/* Info Banner */}
         <Animated.View entering={FadeInDown.duration(300).delay(0)} style={styles.infoBanner}>
           <View style={styles.infoIconWrap}><Info size={20} color={MD3Colors.primary} /></View>

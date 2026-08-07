@@ -31,7 +31,7 @@ const MENU_ITEMS = [
 export default function MenuScreen() {
   const router = useRouter();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}>
       <ScreenHeader title="More" subtitle="All sections" />
       <View style={styles.grid}>
         {MENU_ITEMS.map((item, index) => {

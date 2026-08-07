@@ -164,7 +164,7 @@ export default function SupplierLedgerScreen() {
           data={suppliers}
           keyExtractor={(item) => String(item.id)}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSuppliers} />}
-          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
           ListEmptyComponent={<EmptyState icon={<BookOpen size={48} color={MD3Colors.outline} />} title="No suppliers" subtitle="Add suppliers to view their ledger" />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.duration(300).delay(index * 50)}>

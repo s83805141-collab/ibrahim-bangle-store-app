@@ -189,7 +189,7 @@ export default function GlobalSearchScreen() {
         <FlatList
           data={results}
           keyExtractor={(item) => `${item.type}-${item.id}`}
-          contentContainerStyle={{ padding: MD3Spacing.md, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: MD3Spacing.md, paddingBottom: 140 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
           renderItem={({ item, index }) => (
             <TouchableOpacity

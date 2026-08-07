@@ -85,7 +85,7 @@ export default function ProductsScreen() {
         data={filtered}
         keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
         ListEmptyComponent={<EmptyState icon={<Package size={48} color={MD3Colors.outline} />} title="No products yet" subtitle="Tap + to add your first bangle product" />}
         renderItem={({ item, index }) => {
           const isLowStock = item.total_stock <= (item.min_stock || 0) && (item.min_stock || 0) > 0;

@@ -35,6 +35,7 @@ import {
 } from 'lucide-react-native';
 import { ScreenHeader, Input, Button, EmptyState } from '@/components/ui';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { useBottomTabSpacing } from '@/lib/hooks/useSpacing';
 import {
   TransportReceipt,
   TransportReceiptInput,
@@ -98,6 +99,7 @@ function triggerHaptic() {
 }
 
 export default function TransportRegisterScreen() {
+  const bottomSpacing = useBottomTabSpacing();
   const [form, setForm] = useState<TransportReceiptInput>(emptyForm);
   const [receipts, setReceipts] = useState<TransportReceipt[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -265,7 +267,7 @@ export default function TransportRegisterScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: bottomSpacing + 60 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* ===== TOTAL EXPENSE CARD ===== */}
@@ -505,7 +507,7 @@ export default function TransportRegisterScreen() {
                 <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
               {viewing ? (
                 <>
                   <View style={styles.viewHeader}>

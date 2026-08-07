@@ -69,7 +69,7 @@ export default function CategoriesScreen() {
         data={categories}
         keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}
         ListEmptyComponent={<EmptyState icon={<Tag size={48} color={MD3Colors.outline} />} title="No categories" subtitle="Categories will appear here" />}
         renderItem={({ item, index }) => {
           const count = productCount(item.id);

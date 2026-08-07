@@ -4,6 +4,11 @@ import * as Sharing from 'expo-sharing';
 
 import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, SEED_CATEGORIES } from './schema';
 import type { DatabaseAdapter } from './types';
+import {
+  exportAllImages,
+  restoreAllImages,
+  type ImageBackupEntry,
+} from './imageBackup';
 
 // Platform-specific adapter creation. On web, we import a localStorage-backed
 // adapter; on native, we import the expo-sqlite adapter. Using platform-specific
@@ -144,10 +149,12 @@ export interface BackupPayload {
   exported_at: number;
   store_key: string;
   data: string;
+  images?: ImageBackupEntry[];
 }
 
 export async function exportBackup(): Promise<string> {
   let raw = JSON.stringify({ tables: {}, seqs: {} });
+  let images: ImageBackupEntry[] = [];
   if (Platform.OS === 'web') {
     raw = localStorage.getItem(BACKUP_KEY) || raw;
   } else {
@@ -171,12 +178,15 @@ export async function exportBackup(): Promise<string> {
       }
     }
     raw = JSON.stringify(dump);
+    // Export all images as base64 so they survive app uninstall/restore
+    images = await exportAllImages(db);
   }
   const payload: BackupPayload = {
     version: BACKUP_VERSION,
     exported_at: Date.now(),
     store_key: BACKUP_KEY,
     data: raw,
+    images,
   };
   return JSON.stringify(payload, null, 2);
 }
@@ -208,6 +218,10 @@ export async function importBackup(jsonStr: string): Promise<void> {
       } catch (error) {
         console.error(`Error importing table ${t}:`, error);
       }
+    }
+    // Restore all images: decode base64, write to local storage, update DB URIs
+    if (parsed.images && Array.isArray(parsed.images) && parsed.images.length > 0) {
+      await restoreAllImages(db, parsed.images);
     }
   }
 }

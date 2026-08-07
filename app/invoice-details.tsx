@@ -156,7 +156,7 @@ export default function InvoiceDetailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 140 }}>
         <Animated.View entering={FadeIn.duration(300)}>
           <LinearGradient
             colors={isSale ? [MD3Colors.primary, '#0D47A1'] : [MD3Colors.secondary, '#37474F']}

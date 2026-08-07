@@ -36,6 +36,7 @@ import {
   Wallet,
   LucideIcon,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
@@ -300,6 +301,7 @@ export function PremiumModal({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
@@ -310,10 +312,10 @@ export function PremiumModal({
               <X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} />
             </Pressable>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
             {children}
           </ScrollView>
-          {footer ? <View style={styles.modalStickyFooter}>{footer}</View> : null}
+          {footer ? <View style={[styles.modalStickyFooter, { paddingBottom: MD3Spacing.sm + insets.bottom }]}>{footer}</View> : null}
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -459,7 +461,7 @@ const styles = StyleSheet.create({
   modalStickyFooter: {
     flexDirection: 'row',
     paddingHorizontal: MD3Spacing.lg,
-    paddingVertical: MD3Spacing.md,
+    paddingVertical: MD3Spacing.sm,
     borderTopWidth: 1.5,
     borderTopColor: MD3Colors.outlineVariant,
     gap: MD3Spacing.sm,
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingBottom: 24,
+    paddingBottom: MD3Spacing.md,
     ...MD3Elevation.level3,
   },
   statusBadge: {
