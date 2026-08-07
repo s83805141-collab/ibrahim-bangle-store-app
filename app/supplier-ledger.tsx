@@ -376,7 +376,6 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
   const [txnNumber, setTxnNumber] = useState('');
   const [paymentSlip, setPaymentSlip] = useState('');
   const [note, setNote] = useState('');
-  const [paymentSlip, setPaymentSlip] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -413,19 +412,41 @@ const pickPaymentSlip = async () => {
 };
 
 const handleSave = async () => {
-      setAmount(''); setDate(new Date().toISOString().split('T')[0]); setMethod('Cash'); setTxnNumber(''); setPaymentSlip(''); setNote(''
-    const amt = parseFloat(amount) || 0;
-    if (amt <= 0) { setError('Enter a valid amount'); return; }
-    setSaving(true);
-    try {
-      await addSupplierPayment(supplierId, amt, new Date(date).getTime(), method, txnNumber.trim(), note.trim());
-      onSaved();
-    } catch (e: any) {
-      setError(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const amt = parseFloat(amount) || 0;
+
+  if (amt <= 0) {
+    setError('Enter a valid amount');
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    await addSupplierPayment(
+      supplierId,
+      amt,
+      new Date(date).getTime(),
+      method,
+      txnNumber.trim(),
+      note.trim(),
+      paymentSlip
+    );
+
+    setAmount('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setMethod('Cash');
+    setTxnNumber('');
+    setPaymentSlip('');
+    setNote('');
+    setError('');
+
+    onSaved();
+  } catch (e: any) {
+    setError(e.message || 'Failed to save');
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <PremiumModal
