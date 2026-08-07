@@ -101,6 +101,7 @@ function triggerHaptic() {
 export default function TransportRegisterScreen() {
   const bottomSpacing = useBottomTabSpacing();
   const [form, setForm] = useState<TransportReceiptInput>(emptyForm);
+  const [dateText, setDateText] = useState(formatDateInput(todayTimestamp()));
   const [receipts, setReceipts] = useState<TransportReceipt[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -178,41 +179,53 @@ export default function TransportRegisterScreen() {
       Alert.alert('Validation', 'Paid Amount is required and must be greater than 0');
       return;
     }
+    const updatedForm = {
+  ...form,
+  transport_date: parseDateInput(dateText),
+};
     setLoading(true);
     try {
-      if (editingId) {
-        await updateTransportReceipt(editingId, form);
-        Alert.alert('Updated', 'Receipt updated successfully');
-      } else {
-        await insertTransportReceipt(form);
-        Alert.alert('Saved', 'Transport receipt saved successfully');
-      }
-      setForm(emptyForm);
-      setEditingId(null);
-      await loadData();
-    } catch (error) {
-      console.error('handleSave', error);
-      Alert.alert('Error', 'Unable to save receipt');
-    } finally {
-      setLoading(false);
+  if (editingId) {
+    await updateTransportReceipt(editingId, updatedForm);
+    Alert.alert('Updated', 'Receipt updated successfully');
+  } else {
+    await insertTransportReceipt(updatedForm);
+    Alert.alert('Saved', 'Transport receipt saved successfully');
+  }
+
+  setForm(emptyForm);
+  setDateText(formatDateInput(todayTimestamp()));
+  setEditingId(null);
+
+  await loadData();
+} catch (error) {
+  console.error('handleSave', error);
+  Alert.alert('Error', 'Unable to save receipt');
+} finally {
+  setLoading(false);
     }
   }
 
   function handleEdit(item: TransportReceipt) {
-    setEditingId(item.id);
-    setForm({
-      driver_name: item.driver_name,
-      mobile_number: item.mobile_number,
-      transport_date: item.transport_date,
-      amount: item.amount,
-      receipt_image: item.receipt_image,
-    });
-    triggerHaptic();
+  setEditingId(item.id);
+
+  setForm({
+    driver_name: item.driver_name,
+    mobile_number: item.mobile_number,
+    transport_date: item.transport_date,
+    amount: item.amount,
+    receipt_image: item.receipt_image,
+  });
+
+  setDateText(formatDateInput(item.transport_date));
+
+  triggerHaptic();
   }
 
   function handleCancelEdit() {
-    setForm(emptyForm);
-    setEditingId(null);
+  setForm(emptyForm);
+  setDateText(formatDateInput(todayTimestamp()));
+  setEditingId(null);
   }
 
   function handleDelete(item: TransportReceipt) {
@@ -346,12 +359,17 @@ export default function TransportRegisterScreen() {
               <View style={styles.dateWrap}>
                 <Calendar size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
                 <TextInput
-                  style={styles.dateInput}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={MD3Colors.outline}
-                  value={formatDateInput(form.transport_date)}
-                  onChangeText={(t) => setField('transport_date', parseDateInput(t))}
-                />
+  style={styles.dateInput}
+  placeholder="YYYY-MM-DD"
+  placeholderTextColor={MD3Colors.outline}
+  value={dateText}
+  onChangeText={setDateText}
+  onBlur={() => {
+    const ts = parseDateInput(dateText);
+    setField('transport_date', ts);
+    setDateText(formatDateInput(ts));
+  }}
+/>
                 <Text style={styles.dateDisplay}>{formatDate(form.transport_date)}</Text>
               </View>
 
