@@ -308,7 +308,6 @@ export async function restoreAllImages(
   for (const entry of entries) {
     try {
       const newUri = await restoreImage(entry);
-
       if (!newUri) continue;
 
       await db.exec(
@@ -330,4 +329,4 @@ export async function restoreAllImages(
   console.log(
     `Image restore complete: ${restored}/${entries.length} image(s)`
   );
-        }
+}
