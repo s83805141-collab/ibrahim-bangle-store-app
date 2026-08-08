@@ -198,8 +198,10 @@ function StatCard({ icon, label, value, color, small, onPress, delay }: { icon: 
     <Pressable onPress={onPress} disabled={!onPress} style={styles.statCardOuter}>
       <Animated.View entering={FadeInDown.duration(300).delay(delay || 0)} style={styles.statCard}>
         <View style={[styles.statIconWrap, { backgroundColor: color }]}>{icon}</View>
-        <Text style={styles.statValue} numberOfLines={small ? 2 : 1} adjustsFontSizeToFit={small} minimumFontScale={0.65}>{small ? value : String(value)}</Text>
-        <Text style={styles.statLabel} numberOfLines={2} adjustsFontSizeToFit>{label}</Text>
+        <View style={styles.statContentWrap}>
+          <Text style={styles.statValue} numberOfLines={small ? 2 : 1} adjustsFontSizeToFit={small} minimumFontScale={0.6}>{small ? value : String(value)}</Text>
+          <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -224,19 +226,20 @@ const styles = StyleSheet.create({
   welcomeTitle: { fontFamily: 'Roboto-Bold', fontSize: 24, color: '#FFFFFF', marginBottom: 4 },
   welcomeSubtitle: { fontFamily: 'Roboto-Regular', fontSize: 14, color: 'rgba(255,255,255,0.85)' },
   welcomeIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.18)', justifyContent: 'center', alignItems: 'center' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCardOuter: { width: '48.5%', marginBottom: MD3Spacing.sm },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: MD3Spacing.sm },
+  statCardOuter: { width: '48%', marginBottom: 0 },
   statCard: {
-  width: '100%',
-  minHeight: 140,
-  backgroundColor: MD3Colors.surface,
-  borderRadius: MD3Radius.lg,
-  padding: MD3Spacing.sm + 2,
-  justifyContent: 'space-between',
-  ...MD3Elevation.level2,
-},
-  statIconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: MD3Spacing.xs },
-  statValue: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface, marginBottom: 2, flexShrink: 1, flex: 1 },
+    flex: 1,
+    minHeight: 130,
+    backgroundColor: MD3Colors.surface,
+    borderRadius: MD3Radius.lg,
+    padding: MD3Spacing.sm + 2,
+    justifyContent: 'flex-start',
+    ...MD3Elevation.level2,
+  },
+  statContentWrap: { flex: 1, justifyContent: 'flex-end' },
+  statIconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: MD3Spacing.xs, alignSelf: 'flex-start' },
+  statValue: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface, marginBottom: 2 },
   statLabel: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, lineHeight: 14, flexShrink: 1 },
   sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface, marginTop: MD3Spacing.md, marginBottom: MD3Spacing.sm },
   transactionsCard: { backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, ...MD3Elevation.level2 },

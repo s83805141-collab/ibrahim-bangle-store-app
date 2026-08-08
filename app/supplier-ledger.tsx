@@ -1,20 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView, Alert, TextInput, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView, Alert, TextInput, Modal } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import {
-  BookOpen,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Trash2,
-  X,
-  Truck,
-  Wallet,
-  Search,
-  FileText,
-  Filter,
-  ChevronLeft,
-  Camera,
-} from 'lucide-react-native';
+import { BookOpen, ArrowDownLeft, ArrowUpRight, Trash2, X, Truck, Wallet, Search, FileText, Filter, ChevronLeft } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
   getAllSuppliersFull, getSupplierLedgerEntries, getSupplierLedgerTotals,
@@ -26,7 +13,6 @@ import type { PaymentMethod } from '@/lib/db/schema';
 import { Button, Input, EmptyState, ScreenHeader, FAB, PremiumModal, StatusBadge } from '@/components/ui';
 import { WebView } from 'react-native-webview';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Cheque'] as const;
@@ -374,79 +360,29 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [method, setMethod] = useState<PaymentMethod>('Cash');
   const [txnNumber, setTxnNumber] = useState('');
-  const [paymentSlip, setPaymentSlip] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-  if (visible) {
-    setAmount('');
-    setDate(new Date().toISOString().split('T')[0]);
-    setMethod('Cash');
-    setTxnNumber('');
-    setPaymentSlip('');
-    setNote('');
-    setError('');
-  }
-}, [visible]);
+    if (visible) {
+      setAmount(''); setDate(new Date().toISOString().split('T')[0]); setMethod('Cash'); setTxnNumber(''); setNote(''); setError('');
+    }
+  }, [visible]);
 
-const pickPaymentSlip = async () => {
-  const permission =
-    await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  if (!permission.granted) {
-    setError('Gallery permission required');
-    return;
-  }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsEditing: true,
-    quality: 0.7,
-  });
-
-  if (!result.canceled) {
-    setPaymentSlip(result.assets[0].uri);
-  }
-};
-
-const handleSave = async () => {
-  const amt = parseFloat(amount) || 0;
-
-  if (amt <= 0) {
-    setError('Enter a valid amount');
-    return;
-  }
-
-  setSaving(true);
-
-  try {
-    await addSupplierPayment(
-      supplierId,
-      amt,
-      new Date(date).getTime(),
-      method,
-      txnNumber.trim(),
-      note.trim(),
-      paymentSlip
-    );
-
-    setAmount('');
-    setDate(new Date().toISOString().split('T')[0]);
-    setMethod('Cash');
-    setTxnNumber('');
-    setPaymentSlip('');
-    setNote('');
-    setError('');
-
-    onSaved();
-  } catch (e: any) {
-    setError(e.message || 'Failed to save');
-  } finally {
-    setSaving(false);
-  }
-};
+  const handleSave = async () => {
+    const amt = parseFloat(amount) || 0;
+    if (amt <= 0) { setError('Enter a valid amount'); return; }
+    setSaving(true);
+    try {
+      await addSupplierPayment(supplierId, amt, new Date(date).getTime(), method, txnNumber.trim(), note.trim());
+      onSaved();
+    } catch (e: any) {
+      setError(e.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <PremiumModal
@@ -471,35 +407,6 @@ const handleSave = async () => {
         ))}
       </View>
       <Input label="Transaction Number" value={txnNumber} onChangeText={setTxnNumber} placeholder="Optional" />
-      <Text style={styles.fieldLabel}>Payment Slip</Text>
-
-<TouchableOpacity
-  style={styles.uploadBtn}
-  onPress={pickPaymentSlip}
->
-  <Camera size={20} color={MD3Colors.primary} />
-  <Text style={styles.uploadBtnText}>
-    {paymentSlip ? 'Change Payment Slip' : 'Upload Payment Slip'}
-  </Text>
-</TouchableOpacity>
-
-{paymentSlip ? (
-  <View style={styles.previewContainer}>
-    <Image
-      source={{ uri: paymentSlip }}
-      style={styles.previewImage}
-    />
-
-    <TouchableOpacity
-      onPress={() => setPaymentSlip('')}
-      style={styles.removeSlipBtn}
-    >
-      <Text style={styles.removeSlipText}>
-        Remove
-      </Text>
-    </TouchableOpacity>
-  </View>
-) : null}
       <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </PremiumModal>
@@ -621,54 +528,5 @@ const styles = StyleSheet.create({
     paddingVertical: MD3Spacing.md, marginHorizontal: MD3Spacing.lg, marginBottom: MD3Spacing.lg,
     alignItems: 'center', ...MD3Elevation.level2,
   },
-  pdfPrintText: {
-  fontFamily: 'Roboto-Bold',
-  fontSize: 16,
-  color: MD3Colors.onPrimary,
-},
-
-uploadBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical: 14,
-  borderWidth: 2,
-  borderStyle: 'dashed',
-  borderColor: MD3Colors.primary,
-  borderRadius: MD3Radius.md,
-  marginBottom: MD3Spacing.md,
-},
-
-uploadBtnText: {
-  marginLeft: 8,
-  fontSize: 14,
-  fontFamily: 'Roboto-Medium',
-  color: MD3Colors.primary,
-},
-
-previewContainer: {
-  alignItems: 'center',
-  marginBottom: MD3Spacing.md,
-},
-
-previewImage: {
-  width: 180,
-  height: 180,
-  borderRadius: MD3Radius.md,
-  resizeMode: 'cover',
-},
-
-removeSlipBtn: {
-  marginTop: 10,
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  backgroundColor: MD3Colors.errorContainer,
-  borderRadius: MD3Radius.full,
-},
-
-removeSlipText: {
-  color: MD3Colors.error,
-  fontFamily: 'Roboto-Bold',
-},
-
+  pdfPrintText: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.onPrimary },
 });

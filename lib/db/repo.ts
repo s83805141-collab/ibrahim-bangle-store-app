@@ -688,63 +688,15 @@ export async function addSupplierPayment(
   date: number,
   paymentMethod: PaymentMethod,
   transactionNumber: string,
-  note: string,
-  paymentSlip: string = ''
+  note: string
 ): Promise<number> {
   const db = await getDb();
-  const now = Date.now();
-
-  // Ledger Entry
-  await db.exec(
-    `INSERT INTO supplier_ledger
-    (supplier_id, type, amount, date, note, payment_method, transaction_number, ref_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      supplierId,
-      'payment',
-      amount,
-      date,
-      note || 'Payment',
-      paymentMethod,
-      transactionNumber || '',
-      'manual_payment'
-    ]
+  const res = await db.exec(
+    'INSERT INTO supplier_ledger (supplier_id, type, amount, date, note, payment_method, transaction_number, ref_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [supplierId, 'payment', amount, date, note || 'Payment', paymentMethod, transactionNumber || '', 'manual_payment']
   );
-
-  // Supplier Payment
-  const payment = await db.exec(
-    `INSERT INTO supplier_payments
-    (
-      supplier_id,
-      amount,
-      payment_date,
-      payment_mode,
-      transaction_number,
-      note,
-      created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      supplierId,
-      amount,
-      date,
-      paymentMethod,
-      transactionNumber || '',
-      note || '',
-      now
-    ]
-  );
-
-  const paymentId = payment.insertId!;
-
-  // Save payment slip/proof image
-  if (paymentSlip) {
-    await addPaymentProofImage(paymentId, paymentSlip);
-  }
-
-  return paymentId;
+  return res.insertId!;
 }
-
 
 export async function deleteLedgerEntry(entryId: number): Promise<void> {
   const db = await getDb();

@@ -1,17 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Share,
-  Linking,
-  Platform,
-  Image,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Linking, Platform } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft, FileText, MessageCircle, MessageSquare, Share2, Printer,
@@ -49,9 +37,7 @@ export default function InvoiceDetailsScreen() {
         setSale(s);
       } else {
         const p = await getPurchaseById(parseInt(params.id));
-console.log('PURCHASE DATA:', p);
-console.log('BILL PHOTO:', p?.payment_screenshot);
-setPurchase(p);
+        setPurchase(p);
       }
     } finally {
       setLoading(false);
@@ -257,17 +243,6 @@ setPurchase(p);
             </View>
           ) : null}
         </View>
-        {!isSale && purchase?.payment_screenshot ? (
-  <View style={styles.sectionCard}>
-    <Text style={styles.sectionTitle}>Bill Photo</Text>
-
-    <Image
-      source={{ uri: purchase.payment_screenshot }}
-      style={styles.billPhoto}
-      resizeMode="contain"
-    />
-  </View>
-) : null}
 
         {/* Hidden WebView for PDF/Print support */}
         {isSale && sale && settings ? (
@@ -349,12 +324,6 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant, marginBottom: 2 },
   statValue: { fontFamily: 'Roboto-Bold', fontSize: 14, color: MD3Colors.onSurface },
   sectionCard: { marginHorizontal: MD3Spacing.md, backgroundColor: MD3Colors.surface, borderRadius: MD3Radius.lg, padding: MD3Spacing.md, marginBottom: MD3Spacing.sm, ...MD3Elevation.level2 },
-  billPhoto: {
-  width: '100%',
-  height: 300,
-  borderRadius: MD3Radius.md,
-  backgroundColor: MD3Colors.surfaceVariant,
-},
   sectionTitle: { fontFamily: 'Roboto-Bold', fontSize: 15, color: MD3Colors.onSurface, marginBottom: MD3Spacing.sm },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: MD3Spacing.sm },
   itemRowBorder: { borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },

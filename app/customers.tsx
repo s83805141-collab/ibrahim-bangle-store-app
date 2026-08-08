@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Mod
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Users, Pencil, Trash2, X, Phone, MessageCircle, MapPin, BookOpen, Wallet, Camera, UserCircle2 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '@/lib/imagePicker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
   getAllCustomersFull, addCustomer, updateCustomer, deleteCustomer,
@@ -120,10 +120,9 @@ function CustomerFormModal({ visible, editing, onClose, onSaved }: { visible: bo
   }, [visible, editing]);
 
   const pickPhoto = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { setError('Permission required to access photos'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, allowsEditing: true, aspect: [1, 1] });
-    if (!result.canceled && result.assets?.[0]?.uri) setPhoto(result.assets[0].uri);
+    const uri = await pickImage({ quality: 0.6, allowsEditing: true, aspect: [1, 1] });
+    if (!uri) { setError('Permission required to access photos'); return; }
+    setPhoto(uri);
   };
 
   const handleSave = async () => {

@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ShoppingCart, X, Search, AlertTriangle, FileText, ChevronDown, ChevronUp, Camera, MessageCircle, Share2, Printer, CheckCircle2, MessageSquare } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeIn, FadeInUp } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '@/lib/imagePicker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 import {
   getAllSales, getAllCustomersFull, getAllProducts, addSale, deleteSale, generateInvoiceNumber,
@@ -172,10 +172,9 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
   const balanceDue = Math.max(0, grandTotal - received);
 
   const pickScreenshot = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { setError('Permission required to access photos'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!result.canceled && result.assets?.[0]?.uri) setPaymentScreenshot(result.assets[0].uri);
+    const uri = await pickImage({ quality: 0.6 });
+    if (!uri) { setError('Permission required to access photos'); return; }
+    setPaymentScreenshot(uri);
   };
 
   const getStockForLineItem = (li: LineItem): number | null => {

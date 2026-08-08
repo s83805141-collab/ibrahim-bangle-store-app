@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage as pickImagePersistent, requestPermissions } from '@/lib/imagePicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import {
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 import { ScreenHeader, Input, Button, EmptyState } from '@/components/ui';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
+import { useBottomTabSpacing } from '@/lib/hooks/useSpacing';
 import { getDb } from '@/lib/db/database';
 import { getDailyCustomerEntries } from '@/lib/db/repo';
 
@@ -77,8 +78,8 @@ export default function DailyCustomerEntryScreen() {
   useEffect(() => {
     (async () => {
       if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
+        const granted = await requestPermissions();
+        if (!granted) {
           Alert.alert('Permission required', 'We need access to your photos to pick images.');
         }
       }
@@ -110,20 +111,9 @@ export default function DailyCustomerEntryScreen() {
 
   async function pickImage(forField: 'bill_photo' | 'payment_photo') {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7,
-      });
-      // compatibility with older/newer API
-      // @ts-ignore
-      const cancelled = res.cancelled ?? (Array.isArray((res as any).assets) ? false : false);
-      // new API returns assets array
-      if ((res as any).assets && (res as any).assets.length > 0) {
-        // @ts-ignore
-        setField(forField, (res as any).assets[0].uri);
-      } else if (!cancelled && (res as any).uri) {
-        // @ts-ignore
-        setField(forField, (res as any).uri);
+      const uri = await pickImagePersistent({ quality: 0.7 });
+      if (uri) {
+        setField(forField, uri);
       }
     } catch (error) {
       console.error('pickImage', error);
@@ -284,7 +274,7 @@ export default function DailyCustomerEntryScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: bottomSpacing + 60 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* ===== FORM CARD ===== */}

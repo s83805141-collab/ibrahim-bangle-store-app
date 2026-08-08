@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ClipboardList, X, ChevronDown, ChevronUp, Package, Search, Camera, ImageIcon } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '@/lib/imagePicker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
   getAllPurchases, getAllSuppliersFull, getAllProducts, getAllBankAccounts, addPurchase, deletePurchase,
@@ -175,9 +175,10 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
   };
 
   const pickBillImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] as any, allowsEditing: true, quality: 0.8 });
-    if (!result.canceled) setBillImage(result.assets[0].uri);
+    const uri = await pickImage({ allowsEditing: true, quality: 0.8 });
+    if (uri) setBillImage(uri);
   };
+
 
   const getUnitLabel = (u: Unit): string => (u === 'Dozen' ? 'T' : u[0]);
 
@@ -401,11 +402,9 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
                     <Text style={styles.fieldLabel}>Payment Proof Images</Text>
                     <View style={styles.proofRow}>
                       <TouchableOpacity style={styles.proofAddBtn} onPress={async () => {
-                        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                        if (!perm.granted) { Alert.alert('Permission required'); return; }
-                        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-                        if (!result.canceled && result.assets?.[0]?.uri) {
-                          updatePayment(i, 'proofImages', [...p.proofImages, result.assets[0].uri]);
+                        const uri = await pickImage({ quality: 0.6 });
+                        if (uri) {
+                          updatePayment(i, 'proofImages', [...p.proofImages, uri]);
                         }
                       }}>
                         <Camera size={20} color={MD3Colors.primary} strokeWidth={2.2} />

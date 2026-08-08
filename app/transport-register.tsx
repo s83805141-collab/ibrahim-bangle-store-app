@@ -13,8 +13,7 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
+import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent, requestPermissions } from '@/lib/imagePicker';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import {
@@ -102,7 +101,6 @@ function triggerHaptic() {
 export default function TransportRegisterScreen() {
   const bottomSpacing = useBottomTabSpacing();
   const [form, setForm] = useState<TransportReceiptInput>(emptyForm);
-  const [dateText, setDateText] = useState(formatDateInput(todayTimestamp()));
   const [receipts, setReceipts] = useState<TransportReceipt[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -129,8 +127,8 @@ export default function TransportRegisterScreen() {
   useEffect(() => {
     (async () => {
       if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
+        const granted = await requestPermissions();
+        if (!granted) {
           Alert.alert('Permission required', 'We need access to your photos to pick receipt images.');
         }
       }
@@ -144,48 +142,14 @@ export default function TransportRegisterScreen() {
 
   async function pickImage(source: 'camera' | 'gallery') {
     try {
-      let res: any;
-      if (source === 'camera') {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert('Permission required', 'Camera access is needed to take photos.');
-          return;
-        }
-        res = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.7,
-        });
-      } else {
-        res = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.7,
-        });
-      }
-      if ((res as any).assets && (res as any).assets.length > 0) {
-  const sourceUri = (res as any).assets[0].uri;
-
-  const folder = FileSystem.documentDirectory + 'transport_receipts/';
-
-  const folderInfo = await FileSystem.getInfoAsync(folder);
-
-  if (!folderInfo.exists) {
-    await FileSystem.makeDirectoryAsync(folder, {
-      intermediates: true,
-    });
-  }
-
-  const ext = sourceUri.split('.').pop() || 'jpg';
-
-  const destUri = folder + `receipt_${Date.now()}.${ext}`;
-
-  await FileSystem.copyAsync({
-    from: sourceUri,
-    to: destUri,
-  });
-
-  setField('receipt_image', destUri);
-
-  triggerHaptic();
+      const uri = source === 'camera'
+        ? await takePhotoPersistent({ quality: 0.7 })
+        : await pickImagePersistent({ quality: 0.7 });
+      if (uri) {
+        setField('receipt_image', uri);
+        triggerHaptic();
+      } else if (source === 'camera') {
+        Alert.alert('Permission required', 'Camera access is needed to take photos.');
       }
     } catch (error) {
       console.error('pickImage', error);
@@ -202,53 +166,41 @@ export default function TransportRegisterScreen() {
       Alert.alert('Validation', 'Paid Amount is required and must be greater than 0');
       return;
     }
-    const updatedForm = {
-  ...form,
-  transport_date: parseDateInput(dateText),
-};
     setLoading(true);
     try {
-  if (editingId) {
-    await updateTransportReceipt(editingId, updatedForm);
-    Alert.alert('Updated', 'Receipt updated successfully');
-  } else {
-    await insertTransportReceipt(updatedForm);
-    Alert.alert('Saved', 'Transport receipt saved successfully');
-  }
-
-  setForm(emptyForm);
-  setDateText(formatDateInput(todayTimestamp()));
-  setEditingId(null);
-
-  await loadData();
-} catch (error) {
-  console.error('handleSave', error);
-  Alert.alert('Error', 'Unable to save receipt');
-} finally {
-  setLoading(false);
+      if (editingId) {
+        await updateTransportReceipt(editingId, form);
+        Alert.alert('Updated', 'Receipt updated successfully');
+      } else {
+        await insertTransportReceipt(form);
+        Alert.alert('Saved', 'Transport receipt saved successfully');
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      await loadData();
+    } catch (error) {
+      console.error('handleSave', error);
+      Alert.alert('Error', 'Unable to save receipt');
+    } finally {
+      setLoading(false);
     }
   }
 
   function handleEdit(item: TransportReceipt) {
-  setEditingId(item.id);
-
-  setForm({
-    driver_name: item.driver_name,
-    mobile_number: item.mobile_number,
-    transport_date: item.transport_date,
-    amount: item.amount,
-    receipt_image: item.receipt_image,
-  });
-
-  setDateText(formatDateInput(item.transport_date));
-
-  triggerHaptic();
+    setEditingId(item.id);
+    setForm({
+      driver_name: item.driver_name,
+      mobile_number: item.mobile_number,
+      transport_date: item.transport_date,
+      amount: item.amount,
+      receipt_image: item.receipt_image,
+    });
+    triggerHaptic();
   }
 
   function handleCancelEdit() {
-  setForm(emptyForm);
-  setDateText(formatDateInput(todayTimestamp()));
-  setEditingId(null);
+    setForm(emptyForm);
+    setEditingId(null);
   }
 
   function handleDelete(item: TransportReceipt) {
@@ -382,17 +334,12 @@ export default function TransportRegisterScreen() {
               <View style={styles.dateWrap}>
                 <Calendar size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
                 <TextInput
-  style={styles.dateInput}
-  placeholder="YYYY-MM-DD"
-  placeholderTextColor={MD3Colors.outline}
-  value={dateText}
-  onChangeText={setDateText}
-  onBlur={() => {
-    const ts = parseDateInput(dateText);
-    setField('transport_date', ts);
-    setDateText(formatDateInput(ts));
-  }}
-/>
+                  style={styles.dateInput}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={MD3Colors.outline}
+                  value={formatDateInput(form.transport_date)}
+                  onChangeText={(t) => setField('transport_date', parseDateInput(t))}
+                />
                 <Text style={styles.dateDisplay}>{formatDate(form.transport_date)}</Text>
               </View>
 
