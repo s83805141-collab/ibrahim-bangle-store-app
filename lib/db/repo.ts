@@ -692,54 +692,56 @@ export async function addSupplierPayment(
   paymentSlip: string = ''
 ): Promise<number> {
   const db = await getDb();
-const now = Date.now();
+  const now = Date.now();
 
-// Ledger Entry
-await db.exec(
-  `INSERT INTO supplier_ledger
-  (supplier_id,type,amount,date,note,payment_method,transaction_number,ref_type)
-  VALUES (?,?,?,?,?,?,?,?)`,
-  [
-    supplierId,
-    'payment',
-    amount,
-    date,
-    note || 'Payment',
-    paymentMethod,
-    transactionNumber || '',
-    'manual_payment'
-  ]
-);
+  // Ledger Entry
+  await db.exec(
+    `INSERT INTO supplier_ledger
+    (supplier_id, type, amount, date, note, payment_method, transaction_number, ref_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      supplierId,
+      'payment',
+      amount,
+      date,
+      note || 'Payment',
+      paymentMethod,
+      transactionNumber || '',
+      'manual_payment'
+    ]
+  );
 
-// Supplier Payment
-const payment = await db.exec(
-  `INSERT INTO supplier_payments
-  (
-    supplier_id,
-    amount,
-    payment_date,
-    payment_mode,
-    transaction_number,
-    note,
-    created_at
-  )
-  VALUES (?,?,?,?,?,?,?)`,
-  [
-    supplierId,
-    amount,
-    date,
-    paymentMethod,
-    transactionNumber || '',
-    note || '',
-    now
-  ]
-);
+  // Supplier Payment
+  const payment = await db.exec(
+    `INSERT INTO supplier_payments
+    (
+      supplier_id,
+      amount,
+      payment_date,
+      payment_mode,
+      transaction_number,
+      note,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      supplierId,
+      amount,
+      date,
+      paymentMethod,
+      transactionNumber || '',
+      note || '',
+      now
+    ]
+  );
 
-const paymentId = payment.insertId!;
-}
-if (paymentSlip) {
-  await addPaymentProofImage(paymentId, paymentSlip);
-}
+  const paymentId = payment.insertId!;
+
+  // Save payment slip/proof image
+  if (paymentSlip) {
+    await addPaymentProofImage(paymentId, paymentSlip);
+  }
+
   return paymentId;
 }
 
