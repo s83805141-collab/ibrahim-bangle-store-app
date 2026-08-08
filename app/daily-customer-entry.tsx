@@ -274,7 +274,7 @@ export default function DailyCustomerEntryScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: bottomSpacing + 60 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* ===== FORM CARD ===== */}
