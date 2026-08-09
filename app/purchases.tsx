@@ -464,7 +464,16 @@ function PurchaseDetailModal({ purchase, onClose, formatRs, formatDate }: { purc
               </View>
             ))}
 
-            <View style={styles.detailSummary}>
+            {purchase.payment_screenshot ? (
+  <View style={styles.detailBillSection}>
+    <Text style={styles.sectionTitle}>Purchase Bill Photo</Text>
+    <Image
+      source={{ uri: purchase.payment_screenshot }}
+      style={styles.detailBillImage}
+    />
+  </View>
+) : null}
+<View style={styles.detailSummary}>
               <View style={styles.detailRow}><Text style={styles.detailLabel}>Subtotal</Text><Text style={styles.detailValueBold}>{formatRs(purchase.subtotal)}</Text></View>
               {purchase.discount > 0 && <View style={styles.detailRow}><Text style={styles.detailLabel}>Discount</Text><Text style={[styles.detailValueBold, { color: MD3Colors.error }]}>- {formatRs(purchase.discount)}</Text></View>}
               {purchase.transport_charges > 0 && <View style={styles.detailRow}><Text style={styles.detailLabel}>Transport</Text><Text style={styles.detailValueBold}>{formatRs(purchase.transport_charges)}</Text></View>}
@@ -523,7 +532,18 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm + 2, gap: 6 },
   actionDivider: { width: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.xs },
   actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  detailBillSection: {
+  marginTop: MD3Spacing.md,
+  marginBottom: MD3Spacing.md,
+},
+detailBillImage: {
+  width: '100%',
+  height: 220,
+  borderRadius: MD3Radius.lg,
+  resizeMode: 'contain',
+  backgroundColor: MD3Colors.surfaceVariant,
+},
+modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: MD3Colors.surface, borderTopLeftRadius: MD3Radius.xxl, borderTopRightRadius: MD3Radius.xxl, maxHeight: '95%', ...MD3Elevation.level5 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderBottomWidth: 1.5, borderBottomColor: MD3Colors.outlineVariant },
   modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
