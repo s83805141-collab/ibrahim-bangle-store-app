@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Linking, Platform } from 'react-native';
+import { Image,  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Linking, Platform } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft, FileText, MessageCircle, MessageSquare, Share2, Printer,
@@ -133,6 +133,7 @@ export default function InvoiceDetailsScreen() {
   const paid = isSale ? (sale as SaleHeaderWithDetails).amount_received : (purchase as PurchaseHeaderWithDetails).amount_paid;
   const due = isSale ? (sale as SaleHeaderWithDetails).balance_due : (purchase as PurchaseHeaderWithDetails).remaining_balance;
   const paymentMethod = isSale ? (sale as SaleHeaderWithDetails).payment_method : (purchase as PurchaseHeaderWithDetails).payment_method;
+  const paymentScreenshot = isSale ? (sale as SaleHeaderWithDetails).payment_screenshot : (purchase as PurchaseHeaderWithDetails).payment_screenshot;
   const note = isSale ? (sale as SaleHeaderWithDetails).note || '' : (purchase as PurchaseHeaderWithDetails).note || '';
   const items = isSale ? (sale as SaleHeaderWithDetails).items : (purchase as PurchaseHeaderWithDetails).items;
   const discount = isSale ? (sale as SaleHeaderWithDetails).discount : (purchase as PurchaseHeaderWithDetails).discount || 0;
@@ -207,7 +208,13 @@ export default function InvoiceDetailsScreen() {
           {items.map((item: any, i: number) => (
             <View key={i} style={[styles.itemRow, i < items.length - 1 && styles.itemRowBorder]}>
               <View style={styles.itemInfo}>
-                <Text style={styles.itemName} numberOfLines={1}>{item.product_name}</Text>
+{item.product_image ? (
+<Image
+source={{ uri: item.product_image }}
+style={{ width: 52, height: 52, borderRadius: 8, marginBottom: 6 }}
+/>
+) : null}
+<Text style={styles.itemName} numberOfLines={1}>{item.product_name}</Text>
                 {item.variant_label ? <Text style={styles.itemVariant}>{item.variant_label}</Text> : null}
                 <Text style={styles.itemQty}>{item.quantity} {item.unit} x {formatRs(item.unit_price)}</Text>
               </View>
@@ -236,6 +243,16 @@ export default function InvoiceDetailsScreen() {
             <Text style={styles.payLabel}>Payment Method</Text>
             <Text style={styles.payValue}>{paymentMethod}</Text>
           </View>
+        {paymentScreenshot ? (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.payLabel}>Payment Screenshot</Text>
+            <Image
+              source={{ uri: paymentScreenshot }}
+              style={{ width: 220, height: 220, borderRadius: 10, marginTop: 8 }}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
           {note ? (
             <View style={styles.noteBox}>
               <Text style={styles.noteLabel}>Note</Text>

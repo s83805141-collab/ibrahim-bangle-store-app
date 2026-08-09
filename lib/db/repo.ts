@@ -579,7 +579,7 @@ export async function getPurchaseById(id: number): Promise<PurchaseHeaderWithDet
 export async function getPurchaseItems(headerId: number): Promise<PurchaseItemDetail[]> {
   const db = await getDb();
   const res = await db.exec(`
-    SELECT pi.*, p.name AS product_name,
+    SELECT pi.*, p.name AS product_name, p.image AS product_image,
       (COALESCE(pv.size, '') || ' ' || COALESCE(pv.color, '')) AS variant_label
     FROM purchase_items pi
     LEFT JOIN products p ON pi.product_id = p.id
