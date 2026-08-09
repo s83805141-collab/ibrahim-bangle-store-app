@@ -125,22 +125,64 @@ export default function InvoiceDetailsScreen() {
     );
   }
 
-  const invoiceNumber = isSale ? (sale as SaleHeaderWithDetails).invoice_number : (purchase as PurchaseHeaderWithDetails).invoice_number || `PUR-${purchase!.id}`;
-  const partyName = isSale ? (sale as SaleHeaderWithDetails).customer_name : (purchase as PurchaseHeaderWithDetails).supplier_name;
-  const partyPhone = isSale ? (sale as SaleHeaderWithDetails).customer_phone || '' : '';
-  const date = isSale ? (sale as SaleHeaderWithDetails).date : (purchase as PurchaseHeaderWithDetails).date;
-  const grandTotal = isSale ? (sale as SaleHeaderWithDetails).grand_total : (purchase as PurchaseHeaderWithDetails).grand_total || (purchase as PurchaseHeaderWithDetails).subtotal;
-  const paid = isSale ? (sale as SaleHeaderWithDetails).amount_received : (purchase as PurchaseHeaderWithDetails).amount_paid;
-  const due = isSale ? (sale as SaleHeaderWithDetails).balance_due : (purchase as PurchaseHeaderWithDetails).remaining_balance;
-  const paymentMethod = isSale ? (sale as SaleHeaderWithDetails).payment_method : (purchase as PurchaseHeaderWithDetails).payment_method;
-  const paymentScreenshot = isSale ? (sale as SaleHeaderWithDetails).payment_screenshot : (purchase as PurchaseHeaderWithDetails).payment_screenshot;
-  const note = isSale ? (sale as SaleHeaderWithDetails).note || '' : (purchase as PurchaseHeaderWithDetails).note || '';
-  const items = isSale ? (sale as SaleHeaderWithDetails).items : (purchase as PurchaseHeaderWithDetails).items;
-  const discount = isSale ? (sale as SaleHeaderWithDetails).discount : (purchase as PurchaseHeaderWithDetails).discount || 0;
-  const extraCharges = isSale ? (sale as SaleHeaderWithDetails).extra_charges || 0 : ((purchase as PurchaseHeaderWithDetails).transport_charges || 0) + ((purchase as PurchaseHeaderWithDetails).other_charges || 0);
-  const subtotal = isSale ? (sale as SaleHeaderWithDetails).subtotal : (purchase as PurchaseHeaderWithDetails).subtotal;
+const invoiceNumber = isSale
+  ? (sale as SaleHeaderWithDetails).invoice_number
+  : (purchase as PurchaseHeaderWithDetails).invoice_number || `PUR-${purchase!.id}`;
 
-  const html = isSale && sale && settings ? generateInvoiceHTML(sale, settings) : '';
+const partyName = isSale
+  ? (sale as SaleHeaderWithDetails).customer_name
+  : (purchase as PurchaseHeaderWithDetails).supplier_name;
+
+const partyPhone = isSale
+  ? (sale as SaleHeaderWithDetails).customer_phone || ''
+  : '';
+
+const date = isSale
+  ? (sale as SaleHeaderWithDetails).date
+  : (purchase as PurchaseHeaderWithDetails).date;
+
+const subtotal = isSale
+  ? (sale as SaleHeaderWithDetails).subtotal || 0
+  : (purchase as PurchaseHeaderWithDetails).subtotal || 0;
+
+const discount = isSale
+  ? (sale as SaleHeaderWithDetails).discount || 0
+  : (purchase as PurchaseHeaderWithDetails).discount || 0;
+
+const extraCharges = isSale
+  ? (sale as SaleHeaderWithDetails).extra_charges || 0
+  : ((purchase as PurchaseHeaderWithDetails).transport_charges || 0) +
+    ((purchase as PurchaseHeaderWithDetails).other_charges || 0);
+
+const grandTotal = subtotal - discount + extraCharges;
+
+const paid = isSale
+  ? (sale as SaleHeaderWithDetails).amount_received || 0
+  : (purchase as PurchaseHeaderWithDetails).amount_paid || 0;
+
+const due = isSale
+  ? (sale as SaleHeaderWithDetails).balance_due || 0
+  : (purchase as PurchaseHeaderWithDetails).remaining_balance || 0;
+
+const paymentMethod = isSale
+  ? (sale as SaleHeaderWithDetails).payment_method
+  : (purchase as PurchaseHeaderWithDetails).payment_method;
+
+const paymentScreenshot = isSale
+  ? (sale as SaleHeaderWithDetails).payment_screenshot
+  : (purchase as PurchaseHeaderWithDetails).payment_screenshot;
+
+const note = isSale
+  ? (sale as SaleHeaderWithDetails).note || ''
+  : (purchase as PurchaseHeaderWithDetails).note || '';
+
+const items = isSale
+  ? (sale as SaleHeaderWithDetails).items
+  : (purchase as PurchaseHeaderWithDetails).items;
+
+const html = isSale && sale && settings
+  ? generateInvoiceHTML(sale, settings)
+  : '';
 
   return (
     <View style={styles.container}>
