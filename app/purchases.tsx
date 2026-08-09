@@ -388,7 +388,6 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
                     {(p.paymentMode === 'UPI' || p.paymentMode === 'Bank Transfer') && (
                       <View style={styles.rowInputs}>
                         <Input label="UPI ID" value={p.upiId} onChangeText={t => updatePayment(i, 'upiId', t)} placeholder="UPI" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-                        <Input label="Txn/UTR #" value={p.transactionNumber} onChangeText={t => updatePayment(i, 'transactionNumber', t)} placeholder="UTR" style={{ flex: 1 }} />
                       </View>
                     )}
                     {p.paymentMode === 'Cheque' && (
@@ -397,9 +396,8 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
                         <Input label="Bank Name" value={p.bankName} onChangeText={t => updatePayment(i, 'bankName', t)} placeholder="Bank" style={{ flex: 1 }} />
                       </View>
                     )}
-                    <Input label="Reference #" value={p.referenceNumber} onChangeText={t => updatePayment(i, 'referenceNumber', t)} placeholder="Optional" />
                     <Input label="Note" value={p.note} onChangeText={t => updatePayment(i, 'note', t)} placeholder="Optional" multiline />
-                    <Text style={styles.fieldLabel}>Payment Proof Images</Text>
+                    <Text style={styles.fieldLabel}>Payment Screenshot</Text>
                     <View style={styles.proofRow}>
                       <TouchableOpacity style={styles.proofAddBtn} onPress={async () => {
                         const uri = await pickImage({ quality: 0.6 });
@@ -408,7 +406,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
                         }
                       }}>
                         <Camera size={20} color={MD3Colors.primary} strokeWidth={2.2} />
-                        <Text style={styles.proofAddText}>Add Image</Text>
+                        <Text style={styles.proofAddText}>Add Screenshot</Text>
                       </TouchableOpacity>
                       {p.proofImages.map((img, j) => (
                         <TouchableOpacity key={j} style={styles.proofThumb} onPress={() => updatePayment(i, 'proofImages', p.proofImages.filter((_, k) => k !== j))}>
