@@ -493,7 +493,7 @@ export async function addPurchase(
 ): Promise<number> {
   const db = await getDb();
   const now = Date.now();
-  const grandTotal = header.grand_total || (header.subtotal - (header.discount || 0) + (header.transport_charges || 0) + (header.other_charges || 0));
+  const grandTotal = (header.subtotal || 0) - (header.discount || 0) + (header.transport_charges || 0) + (header.other_charges || 0);
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0) || header.amount_paid;
   const remaining = Math.max(0, grandTotal - totalPaid);
   const res = await db.exec(
