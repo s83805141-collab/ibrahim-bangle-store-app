@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { Plus, Pencil, Trash2, Search, Package, X, AlertTriangle, ChevronDown } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/
 import { getAllProducts, getAllCategories, getAllSuppliers, addProduct, updateProduct, deleteProduct, searchProducts, UNITS, ProductWithDetails, Category } from '@/lib/db/repo';
 import { Button, Input, EmptyState, ScreenHeader, FAB } from '@/components/ui';
 import { Unit } from '@/lib/db/schema';
+import { pickImage } from '@/lib/imagePicker';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
@@ -163,6 +164,7 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
   const [barcode, setBarcode] = useState('');
   const [qrCode, setQrCode] = useState('');
   const [notes, setNotes] = useState('');
+const [image, setImage] = useState('');
   const [variants, setVariants] = useState<{ size: string; color: string; quantity: string }[]>([{ size: '', color: '', quantity: '' }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: number; name: string }[]>([]);
@@ -190,6 +192,7 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
         setBarcode(product.barcode || '');
         setQrCode(product.qr_code || '');
         setNotes(product.notes || '');
+setImage(product.image || '');
         setVariants(
           product.variants?.length
             ? product.variants.map((v: any) => ({ size: v.size || '', color: v.color || '', quantity: String(v.quantity || 0) }))
@@ -200,6 +203,7 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
         setColor(''); setSize(''); setUnit('Box'); setBoxConversion(''); setDozenConversion('');
         setCostPrice(''); setWholesalePrice(''); setRetailPrice(''); setSalePrice(''); setMinStock('');
         setBarcode(''); setQrCode(''); setNotes('');
+setImage('');
         setVariants([{ size: '', color: '', quantity: '' }]);
       }
       setError('');
@@ -218,7 +222,20 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
   const addVariant = () => setVariants(prev => [...prev, { size: '', color: '', quantity: '' }]);
   const removeVariant = (i: number) => setVariants(prev => prev.filter((_, idx) => idx !== i));
 
-  const handleSave = async () => {
+  const handlePickImage = async () => {
+try {
+const uri = await pickImage({
+allowsEditing: true,
+quality: 0.7,
+aspect: [1, 1],
+});
+if (uri) setImage(uri);
+} catch (e) {
+console.error('Product image picker error:', e);
+}
+};
+
+const handleSave = async () => {
     if (!name.trim()) { setError('Product name is required'); return; }
     if (!categoryId) { setError('Category is required'); return; }
     const cleanVariants = variants
@@ -244,7 +261,7 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
         min_stock: parseInt(minStock) || 0,
         barcode: barcode.trim(),
         qr_code: qrCode.trim(),
-        image: '',
+        image: image || '',
         notes: notes.trim(),
       };
       if (product) {
@@ -323,7 +340,59 @@ function ProductFormModal({ visible, product, onClose, onSaved }: { visible: boo
 
             <Input label="QR Code" value={qrCode} onChangeText={setQrCode} placeholder="Optional" />
 
-            {suppliers.length > 0 && (
+            <View style={{ marginTop: MD3Spacing.md, marginBottom: MD3Spacing.md }}>
+<Text style={styles.fieldLabel}>Product Image</Text>
+
+{image ? (
+<View style={{ alignItems: 'center' }}>
+<Image
+source={{ uri: image }}
+style={{
+width: 120,
+height: 120,
+borderRadius: MD3Radius.lg,
+marginBottom: MD3Spacing.sm,
+}}
+/>
+
+<View style={{ flexDirection: 'row', gap: MD3Spacing.sm }}>
+<TouchableOpacity
+onPress={handlePickImage}
+style={styles.chip}
+>
+<Text style={styles.chipText}>Change Image</Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+onPress={() => setImage('')}
+style={styles.chip}
+>
+<Text style={[styles.chipText, { color: MD3Colors.error }]}>Remove</Text>
+</TouchableOpacity>
+</View>
+</View>
+) : (
+<TouchableOpacity
+onPress={handlePickImage}
+style={{
+borderWidth: 1,
+borderStyle: 'dashed',
+borderColor: MD3Colors.outline,
+borderRadius: MD3Radius.lg,
+padding: MD3Spacing.lg,
+alignItems: 'center',
+justifyContent: 'center',
+}}
+>
+<Package size={28} color={MD3Colors.primary} />
+<Text style={[styles.chipText, { marginTop: MD3Spacing.sm }]}>
+Choose Product Image
+</Text>
+</TouchableOpacity>
+)}
+</View>
+
+{suppliers.length > 0 && (
               <>
                 <Text style={styles.fieldLabel}>Supplier (optional)</Text>
                 <View style={styles.chipRow}>
