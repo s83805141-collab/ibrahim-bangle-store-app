@@ -229,7 +229,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
             <Text style={styles.modalTitle}>New Purchase</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
             {suppliers.length === 0 ? (
               <Text style={styles.hintText}>Please add a supplier first.</Text>
             ) : (
