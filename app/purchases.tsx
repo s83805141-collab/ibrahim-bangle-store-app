@@ -120,7 +120,8 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
   useEffect(() => {
     if (visible) {
       loadOptions();
-      setSupplierId(null); setInvoiceNumber(''); setDate(new Date().toISOString().split('T')[0]); setSearch('');
+      setSupplierId(null);
+    setItems([]); setInvoiceNumber(''); setDate(new Date().toISOString().split('T')[0]); setSearch('');
       setLineItems([{ productId: null, variantId: null, productName: '', quantity: '', unit: 'Box' as Unit, unitPrice: '', sellingPrice: '' }]);
       setDiscount(''); setTransportCharges(''); setOtherCharges(''); setPayments([]); setNote(''); setError(''); setBillImage('');
       setShowProductPicker(null);
