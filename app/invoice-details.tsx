@@ -88,7 +88,7 @@ export default function InvoiceDetailsScreen() {
     if (isSale && sale && settings) {
       await shareInvoice(sale, settings);
     } else if (!isSale && purchase) {
-      const text = `Purchase Invoice ${purchase.invoice_number}\nSupplier: ${purchase.supplier_name}\nDate: ${formatDate(purchase.date)}\nTotal: ${formatRs(purchase.grand_total || purchase.subtotal)}\nPaid: ${formatRs(purchase.amount_paid)}\nDue: ${formatRs(purchase.remaining_balance)}`;
+      const text = `Purchase Invoice ${purchase.invoice_number}\nSupplier: ${purchase.supplier_name}\nDate: ${formatDate(purchase.date)}\nTotal: ${formatRs(((purchase?.items || sale?.items || []).reduce((s: any, i: any) => s + (Number(i.quantity || 0) * Number(i.rate || i.price || 0)), 0)) || ((purchase?.items || sale?.items || []).reduce((s: any, i: any) => s + (Number(i.quantity || 0) * Number(i.rate || i.price || 0)), 0)))}\nPaid: ${formatRs(purchase.amount_paid)}\nDue: ${formatRs(purchase.remaining_balance)}`;
       try { await Share.share({ message: text }); } catch (e) {}
     }
   };
