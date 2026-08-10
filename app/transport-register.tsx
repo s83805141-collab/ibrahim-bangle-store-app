@@ -78,7 +78,7 @@ function parseDateInput(s: string): number {
     const m = parseInt(parts[1], 10) - 1;
     const d = parseInt(parts[2], 10);
     if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
-      return new Date(y, m, d).getTime();
+      return new Date(y, m, d, 12, 0, 0).getTime();
     }
   }
   return todayTimestamp();
