@@ -429,10 +429,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
               </>
             )}
           </ScrollView>
-          <View style={styles.modalStickyFooter}>
-            <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-            <Button title="Save Purchase" intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />
-          </View>
+          <SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText="Save Purchase" />
         </View>
       </KeyboardAvoidingView>
     </Modal>
