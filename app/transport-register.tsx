@@ -256,7 +256,7 @@ export default function TransportRegisterScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: bottomSpacing + 60 }}
+          contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 160}}
           keyboardShouldPersistTaps="handled"
         >
           {/* ===== TOTAL EXPENSE CARD ===== */}
