@@ -429,7 +429,7 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
               </>
             )}
           </ScrollView>
-          <SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText="Save Purchase" />
+          <View style={{ paddingBottom: 34 }}><SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText="Save Purchase" /></View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
