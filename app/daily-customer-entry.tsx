@@ -693,6 +693,21 @@ export default function DailyCustomerEntryScreen() {
 }
 
 const styles = StyleSheet.create({
+  modernPillBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modernActivePillBtn: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
   container: { flex: 1, backgroundColor: MD3Colors.background },
   // ===== FORM CARD =====
   formCard: {
