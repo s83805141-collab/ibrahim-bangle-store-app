@@ -1,3 +1,4 @@
+import { SirenButtons } from "../components/SirenButtons";
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -187,10 +188,7 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
             <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Additional notes" multiline />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </ScrollView>
-          <View style={styles.modalStickyFooter}>
-            <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
-            <Button title={supplier ? 'Update' : 'Save'} intent={supplier ? 'update' : 'save'} onPress={handleSave} loading={saving} style={{ flex: 1 }} />
-          </View>
+          <SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText={supplier ? "Update" : "Save"} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
