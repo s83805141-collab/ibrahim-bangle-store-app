@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import React, { useEffect, useState, useRef } from "react";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { Animated as RNAnimated } from 'react-native';
-import React, { useEffect, useState } from 'react';
+
 import {
   View,
   Text,
@@ -15,7 +16,7 @@ import {
 } from 'react-native';
 import { pickImage as pickImagePersistent, requestPermissions } from '@/lib/imagePicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+
 import {
   UserPlus,
   Phone,
