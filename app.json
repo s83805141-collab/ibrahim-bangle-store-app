@@ -53,11 +53,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "9dec529b-f0c8-452c-9116-cb111eb11d25"
-      }
-    },
-    "owner": "saad786786"
+  "router": {},
+  "eas": {
+    "projectId": "62001018-4893-41cf-8a08-a035a7d8e86a"
+  }
+},
+"owner": "saad786786s-team"
   }
 }
