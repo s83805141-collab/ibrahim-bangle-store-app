@@ -338,7 +338,15 @@ export default function TransportRegisterScreen() {
                   style={styles.dateInput}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={MD3Colors.outline}
-                  value={String(form.transport_date || '')}
+                  value={(() => {
+              if (!form.transport_date) return "";
+              const dateObj = new Date(Number(form.transport_date));
+              if (isNaN(dateObj.getTime())) return String(form.transport_date);
+              const y = dateObj.getFullYear();
+              const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+              const d = String(dateObj.getDate()).padStart(2, "0");
+              return `${y}-${m}-${d}`;
+            })()}
                   onChangeText={(t) => setField("transport_date", t === "" ? 0 : parseDateInput(t))}
                 />
                 
