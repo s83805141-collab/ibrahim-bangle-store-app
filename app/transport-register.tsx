@@ -197,12 +197,14 @@ export default function TransportRegisterScreen() {
       amount: item.amount,
       receipt_image: item.receipt_image,
     });
+    setDateInputText(formatDateInput(item.transport_date));
     triggerHaptic();
   }
 
   function handleCancelEdit() {
-    setForm(emptyForm);
-    setEditingId(null);
+  setForm(emptyForm);
+  setDateInputText(formatDateInput(emptyForm.transport_date));
+  setEditingId(null);
   }
 
   function handleDelete(item: TransportReceipt) {
@@ -336,12 +338,19 @@ export default function TransportRegisterScreen() {
               <View style={styles.dateWrap}>
                 <Calendar size={18} color={MD3Colors.onSurfaceVariant} strokeWidth={2.2} />
                 <TextInput
-                  style={styles.dateInput}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={MD3Colors.outline}
-                  value={dateInputText}
-                  onChangeText={(t) => setField("transport_date", t === "" ? 0 : parseDateInput(t))}
-                />
+  style={styles.dateInput}
+  placeholder="YYYY-MM-DD"
+  placeholderTextColor={MD3Colors.outline}
+  value={dateInputText}
+  onChangeText={(t) => {
+    setDateInputText(t);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+      const parsed = parseDateInput(t);
+      setField('transport_date', parsed);
+    }
+  }}
+/>
                 
               </View>
 
