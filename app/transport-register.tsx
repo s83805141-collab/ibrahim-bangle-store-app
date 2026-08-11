@@ -339,7 +339,7 @@ export default function TransportRegisterScreen() {
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={MD3Colors.outline}
                   value={String(form.transport_date || '')}
-                  onChangeText={(t) => setField('transport_date', parseDateInput(t))}
+                  onChangeText={(t) => setField("transport_date", t === "" ? 0 : parseDateInput(t))}
                 />
                 
               </View>
