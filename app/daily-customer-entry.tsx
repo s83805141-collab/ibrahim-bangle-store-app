@@ -1,6 +1,8 @@
+import { Animated as RNAnimated } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { Animated as RNAnimated } from "react-native";
+
+
 import {
   View,
   Text,
