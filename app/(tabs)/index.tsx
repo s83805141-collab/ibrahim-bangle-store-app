@@ -196,7 +196,7 @@ export default function DashboardScreen() {
 function StatCard({ icon, label, value, color, small, onPress, delay }: { icon: React.ReactNode; label: string; value: any; color: string; small?: boolean; onPress?: () => void; delay?: number }) {
   return (
     <Pressable onPress={onPress} disabled={!onPress} style={styles.statCardOuter}>
-      <Animated.View entering={FadeInDown.duration(300).delay(delay || 0)} style={styles.statCard}>
+      <Animated.View style={styles.statCard}>
         <View style={[styles.statIconWrap, { backgroundColor: color }]}>{icon}</View>
         <View style={styles.statContentWrap}>
           <Text style={styles.statValue} numberOfLines={small ? 2 : 1} adjustsFontSizeToFit={small} minimumFontScale={0.6}>{small ? value : String(value)}</Text>
