@@ -1779,6 +1779,10 @@ export async function getDailySalesReport(startDate: number, endDate: number): P
   
   return Array.from(byDay.entries()).map(([date, v]) => ({ date, ...v })).sort((a, b) => a.date - b.date);
 }
+// ============================================================
+// DAILY CUSTOMER ENTRIES
+// ============================================================
+
 export interface DailyCustomerEntry {
   id?: number;
   customer_name: string;
@@ -1786,48 +1790,68 @@ export interface DailyCustomerEntry {
   bill_no: string;
   bill_amount: number;
   paid_amount: number;
+  balance_amount: number;
+  payment_mode: string;
+  payment_status: string;
+  bill_photo: string;
+  payment_photo: string;
+  notes: string;
   created_at?: number;
+  updated_at?: number;
 }
 
 export async function addDailyCustomerEntry(
   entry: DailyCustomerEntry
 ): Promise<number> {
   const db = await getDb();
+  const now = Date.now();
 
   const res = await db.exec(
-  `INSERT INTO daily_customer_entries
-  (
-    customer_name,
-    mobile,
-    bill_no,
-    bill_amount,
-    paid_amount,
-    balance_amount,
-    created_at,
-    updated_at
-  )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    entry.customer_name,
-    entry.mobile,
-    entry.bill_no,
-    entry.bill_amount,
-    entry.paid_amount,
-    entry.bill_amount - entry.paid_amount,
-    Date.now(),
-    Date.now(),
-  ]
-);
+    `INSERT INTO daily_customer_entries
+    (
+      customer_name,
+      mobile,
+      bill_no,
+      bill_amount,
+      paid_amount,
+      balance_amount,
+      payment_mode,
+      payment_status,
+      bill_photo,
+      payment_photo,
+      notes,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      entry.customer_name || '',
+      entry.mobile || '',
+      entry.bill_no || '',
+      Number(entry.bill_amount) || 0,
+      Number(entry.paid_amount) || 0,
+      Number(entry.balance_amount) || 0,
+      entry.payment_mode || 'Cash',
+      entry.payment_status || 'Pending',
+      entry.bill_photo || '',
+      entry.payment_photo || '',
+      entry.notes || '',
+      now,
+      now,
+    ]
+  );
 
   return res.insertId!;
 }
 
-export async function getDailyCustomerEntries() {
+export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
   const db = await getDb();
 
   const res = await db.exec(
-    "SELECT * FROM daily_customer_entries ORDER BY created_at DESC"
+    `SELECT *
+     FROM daily_customer_entries
+     ORDER BY created_at DESC`
   );
 
-  return res.rows._array;
+  return (res.rows._array || []) as DailyCustomerEntry[];
 }
