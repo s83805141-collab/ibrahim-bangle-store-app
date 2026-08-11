@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { Animated as RNAnimated } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -72,6 +74,8 @@ export default function DailyCustomerEntryScreen() {
   const [form, setForm] = useState<EntryRow>(empty);
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const pulseAnim = React.useRef(new RNAnimated.Value(1)).current;
+  React.useEffect(() => { RNAnimated.loop(RNAnimated.sequence([RNAnimated.timing(pulseAnim, { toValue: 1.05, duration: 400, useNativeDriver: true }), RNAnimated.timing(pulseAnim, { toValue: 0.97, duration: 300, useNativeDriver: true }), RNAnimated.timing(pulseAnim, { toValue: 1.03, duration: 300, useNativeDriver: true }), RNAnimated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }) ])).start(); }, []);
   const [viewing, setViewing] = useState<EntryRow | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -457,6 +461,7 @@ export default function DailyCustomerEntryScreen() {
                 ) : (
                   <Button
                     title="Save Entry"
+        style={{ transform: [{ scale: pulseAnim }] as any }}
                     intent="save"
                     onPress={saveEntry}
                     loading={loading}
