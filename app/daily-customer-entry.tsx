@@ -363,7 +363,7 @@ export default function DailyCustomerEntryScreen() {
               {/* Payment mode chips */}
               <Text style={styles.fieldLabel}>Payment Mode</Text>
               <View style={styles.chipRow}>
-                {paymentModes.map((m) => (
+                {paymentModes?.map((m) => (
                   <TouchableOpacity
                     key={m}
                     style={[styles.chip, form.payment_mode === m && styles.chipSelected]}
@@ -377,7 +377,7 @@ export default function DailyCustomerEntryScreen() {
               {/* Payment status chips */}
               <Text style={styles.fieldLabel}>Payment Status</Text>
               <View style={styles.chipRow}>
-                {paymentStatuses.map((s) => (
+                {paymentStatuses?.map((s) => (
                   <TouchableOpacity
                     key={s}
                     style={[styles.chip, form.payment_status === s && chipStatusSelected(s)]}
@@ -489,7 +489,7 @@ export default function DailyCustomerEntryScreen() {
               subtitle="Fill the form above to add your first entry"
             />
           ) : (
-            entries.map((e, index) => {
+            entries?.map((e, index) => {
               const badge = statusBadge(e.payment_status);
               return (
                 <Animated.View key={String(e.id)} entering={FadeInDown.duration(250).delay(index * 40)}>
