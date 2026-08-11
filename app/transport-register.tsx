@@ -338,10 +338,10 @@ export default function TransportRegisterScreen() {
                   style={styles.dateInput}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={MD3Colors.outline}
-                  value=''
+                  value={String(form.transport_date || '')}
                   onChangeText={(t) => setField('transport_date', parseDateInput(t))}
                 />
-                <Text style={styles.dateDisplay}>{formatDate(form.transport_date)}</Text>
+                
               </View>
 
               <Input
