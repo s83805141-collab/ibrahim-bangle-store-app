@@ -82,25 +82,26 @@ export default function DailyCustomerEntryScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
-    (async () => {
-      if (Platform.OS !== 'web') {
-        const granted = await requestPermissions();
-        if (!granted) {
-          Alert.alert('Permission required', 'We need access to your photos to pick images.');
-        }
-      }
+  (async () => {
+    try {
       await loadEntries();
-    })();
-  }, []);
+    } catch (error) {
+      console.error('Daily Customer startup error:', error);
+    }
+  })();
+}, []);
 
   async function loadEntries() {
-    try {
-      const rows = await getDailyCustomerEntries();
-      setEntries(rows as EntryRow[]);
-    } catch (error) {
-      console.error('loadEntries', error);
-      Alert.alert('Error', 'Unable to load entries');
-    }
+  try {
+    const rows = await getDailyCustomerEntries();
+    setEntries(rows as EntryRow[]);
+  } catch (error) {
+    console.error('loadEntries ERROR:', error);
+    Alert.alert(
+      'Database Error',
+      'Daily Customer entries load nahi ho pa rahi hain.'
+    );
+  }
   }
 
   function setField<K extends keyof EntryRow>(key: K, value: EntryRow[K]) {
