@@ -191,7 +191,7 @@ export default function DailyCustomerEntryScreen() {
             created_at,
             updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             form.customer_name,
             form.mobile || '',
