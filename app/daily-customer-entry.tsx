@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { addDailyCustomerEntry } from '@/lib/db/repo';
+import { addDailyCustomerEntry, getAllProducts } from '@/lib/db/repo';
 import {
   Animated, View,
   Text,
@@ -16,7 +16,13 @@ export default function DailyCustomerEntryScreen() {
   const [billNo, setBillNo] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productQuantity, setProductQuantity] = useState('1');
   const heartScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    getAllProducts().then(setProducts).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -119,6 +125,55 @@ export default function DailyCustomerEntryScreen() {
           keyboardType="numeric"
         />
 
+        <Text style={styles.label}>Select Product</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+          {products.map((product) => (
+            <Pressable
+              key={product.id}
+              onPress={() => {
+                setSelectedProduct(product);
+                const qty = Number(productQuantity) || 1;
+                setBillAmount(String((product.sale_price || 0) * qty));
+              }}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 10,
+                marginRight: 8,
+                backgroundColor: selectedProduct?.id === product.id ? '#2563EB' : '#EEF2FF',
+              }}
+            >
+              <Text style={{ color: selectedProduct?.id === product.id ? '#FFFFFF' : '#111827', fontWeight: '600' }}>
+                {product.name}
+              </Text>
+              <Text style={{ color: selectedProduct?.id === product.id ? '#FFFFFF' : '#4B5563', marginTop: 2 }}>
+                ₹{Number(product.sale_price || 0).toFixed(2)}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {selectedProduct && (
+          <View style={{ marginBottom: 8 }}>
+            <Text style={styles.label}>Quantity</Text>
+            <TextInput
+              style={styles.input}
+              value={productQuantity}
+              onChangeText={(value) => {
+                setProductQuantity(value);
+                const qty = Number(value) || 0;
+                setBillAmount(String((selectedProduct.sale_price || 0) * qty));
+              }}
+              keyboardType="numeric"
+              placeholder="1"
+              placeholderTextColor="#9CA3AF"
+            />
+
+            <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '700', color: '#111827' }}>
+              Sale Price: ₹{Number(selectedProduct.sale_price || 0).toFixed(2)} × {Number(productQuantity) || 0}
+            </Text>
+          </View>
+        )}
         <Text style={styles.label}>Paid Amount</Text>
 
         <TextInput
