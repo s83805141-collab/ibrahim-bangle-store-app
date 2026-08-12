@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { addDailyCustomerEntry } from '@/lib/db/repo';
 import {
   View,
   Text,
@@ -20,17 +21,36 @@ export default function DailyCustomerEntryScreen() {
   const paid = Number(paidAmount) || 0;
   const balance = Math.max(0, bill - paid);
 
-  const saveEntry = () => {
-    if (!customerName.trim()) {
-      Alert.alert('Validation', 'Customer Name is required');
-      return;
-    }
+  const saveEntry = async () => {
+  if (!customerName.trim()) {
+    Alert.alert('Validation', 'Customer Name is required');
+    return;
+  }
+
+  try {
+    await addDailyCustomerEntry({
+      customer_name: customerName.trim(),
+      mobile: mobile.trim(),
+      bill_no: billNo.trim(),
+      bill_amount: bill,
+      paid_amount: paid,
+      balance_amount: balance,
+      payment_mode: 'Cash',
+      payment_status: balance > 0 ? 'Pending' : 'Paid',
+      bill_photo: '',
+      payment_photo: '',
+      notes: '',
+    });
 
     Alert.alert(
       'Success',
       `Customer: ${customerName}\nBalance: ₹${balance.toFixed(2)}`
     );
-  };
+  } catch (error) {
+    console.error('Daily customer save failed:', error);
+    Alert.alert('Error', 'Entry save nahi hui');
+  }
+};
 
   return (
     <ScrollView
