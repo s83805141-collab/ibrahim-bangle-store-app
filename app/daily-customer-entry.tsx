@@ -26,16 +26,20 @@ export default function DailyCustomerEntryScreen() {
   const [billPhoto, setBillPhoto] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productLoadError, setProductLoadError] = useState('');
   const [productQuantity, setProductQuantity] = useState('1');
   const heartScale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     getAllProducts()
       .then((data) => {
         console.log('DAILY CUSTOMER PRODUCTS:', data);
-        setProducts(data);
+        setProducts(data || []);
+                setProductLoadError('');
       })
       .catch((error) => {
         console.error('DAILY CUSTOMER PRODUCTS ERROR:', error);
+                setProducts([]);
+                setProductLoadError(String(error?.message || error));
       });
   }, []);
 
@@ -226,6 +230,30 @@ export default function DailyCustomerEntryScreen() {
         />
 
         <Text style={styles.label}>Select Product</Text>
+
+        {productLoadError ? (
+          <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEE2E2' }}>
+            <Text style={{ color: '#B91C1C', fontWeight: '600' }}>
+              Product loading error:
+            </Text>
+            <Text style={{ color: '#B91C1C', marginTop: 4 }}>
+              {productLoadError}
+            </Text>
+          </View>
+        ) : products.length === 0 ? (
+          <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEF3C7' }}>
+            <Text style={{ color: '#92400E', fontWeight: '600' }}>
+              Koi product nahi mila
+            </Text>
+            <Text style={{ color: '#92400E', marginTop: 4 }}>
+              Total products loaded: 0
+            </Text>
+          </View>
+        ) : (
+          <Text style={{ marginBottom: 8, color: '#166534', fontWeight: '600' }}>
+            Total products: {products.length}
+          </Text>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
           {products.map((product) => (
             <Pressable
