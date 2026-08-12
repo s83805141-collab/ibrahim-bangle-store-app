@@ -1844,6 +1844,63 @@ export async function addDailyCustomerEntry(
   return res.insertId!;
 }
 
+
+export async function getDailyCustomerEntryById(
+  id: number
+): Promise<DailyCustomerEntry | null> {
+  const db = await getDb();
+
+  const res = await db.exec(
+    `SELECT * FROM daily_customer_entries WHERE id = ? LIMIT 1`,
+    [id]
+  );
+
+  if (res.rows.length === 0) return null;
+
+  return res.rows._array[0] as DailyCustomerEntry;
+}
+
+export async function updateDailyCustomerEntry(
+  id: number,
+  entry: DailyCustomerEntry
+): Promise<void> {
+  const db = await getDb();
+  const now = Date.now();
+
+  await db.exec(
+    `UPDATE daily_customer_entries
+     SET
+       customer_name = ?,
+       mobile = ?,
+       bill_no = ?,
+       bill_amount = ?,
+       paid_amount = ?,
+       balance_amount = ?,
+       payment_mode = ?,
+       payment_status = ?,
+       bill_photo = ?,
+       payment_photo = ?,
+       notes = ?,
+       updated_at = ?
+     WHERE id = ?`,
+    [
+      entry.customer_name || '',
+      entry.mobile || '',
+      entry.bill_no || '',
+      Number(entry.bill_amount) || 0,
+      Number(entry.paid_amount) || 0,
+      Number(entry.balance_amount) || 0,
+      entry.payment_mode || 'Cash',
+      entry.payment_status || 'Pending',
+      entry.bill_photo || '',
+      entry.payment_photo || '',
+      entry.notes || '',
+      now,
+      id,
+    ]
+  );
+}
+
 export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
   const db = await getDb();
 

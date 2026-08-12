@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent } from '@/lib/imagePicker';
 import { addDailyCustomerEntry, getAllProducts } from '@/lib/db/repo';
 import {
   Animated, View,
@@ -16,6 +17,8 @@ export default function DailyCustomerEntryScreen() {
   const [billNo, setBillNo] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
+  const [billPhoto, setBillPhoto] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [productQuantity, setProductQuantity] = useState('1');
@@ -38,6 +41,7 @@ export default function DailyCustomerEntryScreen() {
   const bill = Number(billAmount) || 0;
   const paid = Number(paidAmount) || 0;
   const balance = Math.max(0, bill - paid);
+  const entryDate = new Date().toLocaleString('en-IN');
 
   const saveEntry = async () => {
   if (!customerName.trim()) {
@@ -174,7 +178,68 @@ export default function DailyCustomerEntryScreen() {
             </Text>
           </View>
         )}
-        <Text style={styles.label}>Paid Amount</Text>
+        <Text style={styles.label}>Payment Mode</Text>
+
+      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+        {['Cash', 'UPI', 'Bank'].map((mode) => (
+          <Pressable
+            key={mode}
+            onPress={() => setPaymentMode(mode)}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 10,
+              marginRight: 8,
+              backgroundColor:
+                paymentMode === mode ? '#2563EB' : '#EEF6FF',
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  paymentMode === mode ? '#FFFFFF' : '#111827',
+                fontWeight: '600',
+              }}
+            >
+              {mode}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Bill Photo</Text>
+
+      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+        <Pressable
+          onPress={async () => {
+            const uri = await pickImagePersistent({ quality: 0.7 });
+            if (uri) setBillPhoto(uri);
+          }}
+          style={styles.photoButton}
+        >
+          <Text style={styles.photoButtonText}>📁 Gallery</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={async () => {
+            const uri = await takePhotoPersistent({ quality: 0.7 });
+            if (uri) setBillPhoto(uri);
+          }}
+          style={styles.photoButton}
+        >
+          <Text style={styles.photoButtonText}>📷 Camera</Text>
+        </Pressable>
+      </View>
+
+      {billPhoto ? (
+        <Text style={styles.photoSelected}>✓ Bill photo selected</Text>
+      ) : null}
+
+      <Text style={styles.label}>Date & Time</Text>
+
+      <Text style={styles.dateTimeText}>{entryDate}</Text>
+
+      <Text style={styles.label}>Paid Amount</Text>
 
         <TextInput
           style={styles.input}
@@ -275,6 +340,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginTop: 4,
+  },
+
+  photoButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#EEF6FF',
+    marginRight: 8,
+  },
+
+  photoButtonText: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+
+  photoSelected: {
+    color: '#16A34A',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+
+  dateTimeText: {
+    fontSize: 15,
+    color: '#374151',
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 10,
   },
 
   saveButton: {
