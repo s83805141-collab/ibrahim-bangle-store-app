@@ -29,7 +29,14 @@ export default function DailyCustomerEntryScreen() {
   const [productQuantity, setProductQuantity] = useState('1');
   const heartScale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    getAllProducts().then(setProducts).catch(console.error);
+    getAllProducts()
+      .then((data) => {
+        console.log('DAILY CUSTOMER PRODUCTS:', data);
+        setProducts(data);
+      })
+      .catch((error) => {
+        console.error('DAILY CUSTOMER PRODUCTS ERROR:', error);
+      });
   }, []);
 
   useEffect(() => {
