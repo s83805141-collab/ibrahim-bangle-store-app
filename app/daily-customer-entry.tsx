@@ -28,7 +28,7 @@ export default function DailyCustomerEntryScreen() {
 
     Alert.alert(
       'Success',
-      `Customer: ${customerName}\nBill: ₹${bill.toFixed(2)}\nPaid: ₹${paid.toFixed(2)}\nBalance: ₹${balance.toFixed(2)}`
+      `Customer: ${customerName}\nBalance: ₹${balance.toFixed(2)}`
     );
   };
 
