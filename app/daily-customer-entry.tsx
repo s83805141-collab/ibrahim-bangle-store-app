@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent } from '@/lib/imagePicker';
-import { addDailyCustomerEntry, getAllProducts } from '@/lib/db/repo';
+import { addDailyCustomerEntry, getAllProducts, getDailyCustomerEntryById, updateDailyCustomerEntry } from '@/lib/db/repo';
 import {
   Animated, View,
   Text,
@@ -9,9 +10,13 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  Linking,
 } from 'react-native';
 
 export default function DailyCustomerEntryScreen() {
+  const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const editingId = editId ? Number(editId) : null;
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile] = useState('');
   const [billNo, setBillNo] = useState('');
@@ -26,6 +31,24 @@ export default function DailyCustomerEntryScreen() {
   useEffect(() => {
     getAllProducts().then(setProducts).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (!editingId) return;
+
+    getDailyCustomerEntryById(editingId)
+      .then((entry) => {
+        if (!entry) return;
+
+        setCustomerName(entry.customer_name || '');
+        setMobile(entry.mobile || '');
+        setBillNo(entry.bill_no || '');
+        setBillAmount(String(entry.bill_amount ?? ''));
+        setPaidAmount(String(entry.paid_amount ?? ''));
+        setPaymentMode(entry.payment_mode || 'Cash');
+        setBillPhoto(entry.bill_photo || '');
+      })
+      .catch(console.error);
+  }, [editingId]);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -43,6 +66,41 @@ export default function DailyCustomerEntryScreen() {
   const balance = Math.max(0, bill - paid);
   const entryDate = new Date().toLocaleString('en-IN');
 
+  const sendCustomerDetails = async (type: 'whatsapp' | 'sms') => {
+    if (!mobile.trim()) {
+      Alert.alert('Mobile Number', 'Customer ka mobile number enter karein');
+      return;
+    }
+
+    const message =
+      `Ibrahim Bangle Store\n` +
+      `Customer: ${customerName.trim() || '-'}\n` +
+      `Bill No: ${billNo.trim() || '-'}\n` +
+      `Bill Amount: ₹${bill.toFixed(2)}\n` +
+      `Paid: ₹${paid.toFixed(2)}\n` +
+      `Balance: ₹${balance.toFixed(2)}\n` +
+      `Payment Mode: ${paymentMode}`;
+
+    try {
+      if (type === 'whatsapp') {
+        const phone = mobile.replace(/\\D/g, '');
+        const url = `whatsapp://send?phone=91${phone}&text=${encodeURIComponent(message)}`;
+        await Linking.openURL(url);
+      } else {
+        const url = `sms:${mobile.replace(/\\D/g, '')}?body=${encodeURIComponent(message)}`;
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      console.error('Send details failed:', error);
+      Alert.alert(
+        'Unable to open',
+        type === 'whatsapp'
+          ? 'WhatsApp open nahi ho saka'
+          : 'SMS app open nahi ho saka'
+      );
+    }
+  };
+
   const saveEntry = async () => {
   if (!customerName.trim()) {
     Alert.alert('Validation', 'Customer Name is required');
@@ -57,9 +115,9 @@ export default function DailyCustomerEntryScreen() {
       bill_amount: bill,
       paid_amount: paid,
       balance_amount: balance,
-      payment_mode: 'Cash',
+      payment_mode: paymentMode,
       payment_status: balance > 0 ? 'Pending' : 'Paid',
-      bill_photo: '',
+      bill_photo: billPhoto,
       payment_photo: '',
       notes: '',
     });
@@ -85,6 +143,13 @@ export default function DailyCustomerEntryScreen() {
       <Text style={styles.subtitle}>
         Record daily customer bills
       </Text>
+      <Pressable
+        onPress={() => router.push('/daily-customer-history')}
+        style={styles.historyButton}
+      >
+        <Text style={styles.historyButtonText}>📋 Customer History</Text>
+      </Pressable>
+
 
       <View style={styles.card}>
         <Text style={styles.label}>Customer Name *</Text>
@@ -258,13 +323,29 @@ export default function DailyCustomerEntryScreen() {
           </Text>
         </View>
 
-        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+        <View style={styles.shareRow}>
+        <Pressable
+          style={styles.whatsappButton}
+          onPress={() => sendCustomerDetails('whatsapp')}
+        >
+          <Text style={styles.shareButtonText}>💬 WhatsApp</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.smsButton}
+          onPress={() => sendCustomerDetails('sms')}
+        >
+          <Text style={styles.shareButtonText}>📱 SMS</Text>
+        </Pressable>
+      </View>
+
+      <Animated.View style={{ transform: [{ scale: heartScale }] }}>
         <Pressable
           style={styles.saveButton}
           onPress={saveEntry}
         >
           <Text style={styles.saveText}>
-            Save Entry
+            {editingId ? 'Update Entry' : 'Save Entry'}
           </Text>
         </Pressable>
         </Animated.View>
@@ -368,6 +449,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     padding: 12,
     borderRadius: 10,
+  },
+
+  shareRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+
+  whatsappButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
+    alignItems: 'center',
+  },
+
+  smsButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+  },
+
+  shareButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  historyButton: {
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#EEF6FF',
+    alignItems: 'center',
+  },
+
+  historyButtonText: {
+    color: '#2563EB',
+    fontSize: 15,
+    fontWeight: '700',
   },
 
   saveButton: {
