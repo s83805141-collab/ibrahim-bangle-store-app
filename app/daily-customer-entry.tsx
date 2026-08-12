@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { addDailyCustomerEntry } from '@/lib/db/repo';
 import {
-  View,
+  Animated, View,
   Text,
   TextInput,
   StyleSheet,
@@ -16,6 +16,18 @@ export default function DailyCustomerEntryScreen() {
   const [billNo, setBillNo] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(heartScale, { toValue: 1.08, duration: 500, useNativeDriver: true }),
+        Animated.timing(heartScale, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [heartScale]);
 
   const bill = Number(billAmount) || 0;
   const paid = Number(paidAmount) || 0;
@@ -126,6 +138,7 @@ export default function DailyCustomerEntryScreen() {
           </Text>
         </View>
 
+        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
         <Pressable
           style={styles.saveButton}
           onPress={saveEntry}
@@ -134,6 +147,7 @@ export default function DailyCustomerEntryScreen() {
             Save Entry
           </Text>
         </Pressable>
+        </Animated.View>
       </View>
     </ScrollView>
   );
@@ -210,7 +224,7 @@ const styles = StyleSheet.create({
 
   saveButton: {
     marginTop: 20,
-    height: 50,
+    height: 46,
     borderRadius: 12,
     backgroundColor: '#2563EB',
     alignItems: 'center',
