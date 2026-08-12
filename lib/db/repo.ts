@@ -1901,6 +1901,58 @@ export async function updateDailyCustomerEntry(
   );
 }
 
+export async function deductProductStock(
+  productId: number,
+  variantId: number | null,
+  quantity: number
+): Promise<void> {
+  const db = await getDb();
+
+  if (quantity <= 0) {
+    throw new Error('Quantity must be greater than 0');
+  }
+
+  const stock = await getProductStock(productId, variantId);
+
+  if (stock < quantity) {
+    throw new Error(
+      `Insufficient stock (available: ${stock}, requested: ${quantity})`
+    );
+  }
+
+  if (variantId) {
+    await db.exec(
+      'UPDATE product_variants SET quantity = MAX(0, quantity - ?) WHERE id = ?',
+      [quantity, variantId]
+    );
+  } else {
+    let remaining = quantity;
+
+    const res = await db.exec(
+      'SELECT id, quantity FROM product_variants WHERE product_id = ? AND quantity > 0 ORDER BY id',
+      [productId]
+    );
+
+    for (const row of res.rows._array || []) {
+      if (remaining <= 0) break;
+
+      const available = Number(row.quantity) || 0;
+      const deduct = Math.min(available, remaining);
+
+      await db.exec(
+        'UPDATE product_variants SET quantity = MAX(0, quantity - ?) WHERE id = ?',
+        [deduct, row.id]
+      );
+
+      remaining -= deduct;
+    }
+
+    if (remaining > 0) {
+      throw new Error('Unable to deduct complete stock');
+    }
+  }
+}
+
 export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
   const db = await getDb();
 

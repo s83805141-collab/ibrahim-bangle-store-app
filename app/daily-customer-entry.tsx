@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent } from '@/lib/imagePicker';
-import { addDailyCustomerEntry, getAllProducts, getDailyCustomerEntryById, updateDailyCustomerEntry } from '@/lib/db/repo';
+import { addDailyCustomerEntry, deductProductStock, getAllProducts, getDailyCustomerEntryById, updateDailyCustomerEntry } from '@/lib/db/repo';
 import {
   Animated, View,
   Text,
@@ -108,6 +108,30 @@ export default function DailyCustomerEntryScreen() {
   }
 
   try {
+    if (selectedProduct && !editingId) {
+      const qty = Number(productQuantity) || 0;
+      const availableStock = Number(selectedProduct.total_stock) || 0;
+
+      if (qty <= 0) {
+        Alert.alert('Validation', 'Quantity 1 ya usse zyada honi chahiye');
+        return;
+      }
+
+      if (availableStock < qty) {
+        Alert.alert(
+          'Insufficient Stock',
+          `Available stock: ${availableStock}`
+        );
+        return;
+      }
+
+      await deductProductStock(
+        selectedProduct.id,
+        null,
+        qty
+      );
+    }
+
     await addDailyCustomerEntry({
       customer_name: customerName.trim(),
       mobile: mobile.trim(),
@@ -240,6 +264,10 @@ export default function DailyCustomerEntryScreen() {
 
             <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '700', color: '#111827' }}>
               Sale Price: ₹{Number(selectedProduct.sale_price || 0).toFixed(2)} × {Number(productQuantity) || 0}
+            </Text>
+
+            <Text style={{ marginTop: 6, fontSize: 14, fontWeight: '600', color: '#2563EB' }}>
+              Available Stock: {Number(selectedProduct.total_stock || 0)}
             </Text>
           </View>
         )}
