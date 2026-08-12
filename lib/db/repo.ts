@@ -1855,3 +1855,4 @@ export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
 
   return (res.rows._array || []) as DailyCustomerEntry[];
 }
+
