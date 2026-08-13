@@ -351,6 +351,24 @@ CREATE TABLE IF NOT EXISTS daily_customer_entry_items (
 );
 `;
 
+export const MIGRATION_SQL_6 = `
+CREATE TABLE IF NOT EXISTS daily_customer_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  daily_customer_entry_id INTEGER NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  payment_mode TEXT DEFAULT 'Cash',
+  payment_date INTEGER NOT NULL,
+  payment_time TEXT DEFAULT '',
+  transaction_number TEXT DEFAULT '',
+  payment_photo TEXT DEFAULT '',
+  note TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (daily_customer_entry_id)
+    REFERENCES daily_customer_entries(id)
+    ON DELETE CASCADE
+);
+`;
+
 export const SEED_CATEGORIES = [
   'Toda',
   'Plain Toda',

@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent } from '@/lib/imagePicker';
-import { addDailyCustomerEntry, deductProductStock, getAllProducts, getDailyCustomerEntryById, updateDailyCustomerEntry } from '@/lib/db/repo';
+import {
+    addDailyCustomerEntry,
+    addDailyCustomerPayment,
+    deleteDailyCustomerPayment,
+    deductProductStock,
+    getAllProducts,
+    getDailyCustomerEntryById,
+    getDailyCustomerPayments,
+    updateDailyCustomerEntry,
+} from '@/lib/db/repo';
 import {
   Animated, View,
   Text,
@@ -24,6 +33,10 @@ export default function DailyCustomerEntryScreen() {
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [billPhoto, setBillPhoto] = useState('');
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentModeReceive, setPaymentModeReceive] = useState<'Cash'>('Cash');
+    const [paymentSaving, setPaymentSaving] = useState(false);
+    const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [productLoadError, setProductLoadError] = useState('');
 
@@ -170,7 +183,102 @@ const balance = Math.max(0, bill - paid);
     }
   };
 
-  const saveEntry = async () => {
+  
+const receivePayment = async () => {
+    if (!editingId) {
+        Alert.alert('Save Entry', 'Pehle customer entry save karein.');
+        return;
+    }
+
+    const amount = Number(paymentAmount) || 0;
+    const currentBalance = Math.max(
+        Number(billAmount) - Number(paidAmount),
+        0
+    );
+
+    if (amount <= 0) {
+        Alert.alert('Validation', 'Payment amount enter karein.');
+        return;
+    }
+
+    if (amount > currentBalance) {
+        Alert.alert(
+            'Validation',
+            `Maximum payment ₹${currentBalance.toFixed(2)} ho sakti hai.`
+        );
+        return;
+    }
+
+    try {
+        setPaymentSaving(true);
+
+        await addDailyCustomerPayment({
+            daily_customer_entry_id: editingId,
+            amount,
+            payment_mode: paymentModeReceive,
+            payment_date: Date.now(),
+            payment_time: new Date().toLocaleTimeString('en-IN'),
+            transaction_number: '',
+            payment_photo: '',
+            note: '',
+        });
+
+        const updated = await getDailyCustomerEntryById(editingId);
+        if (updated) {
+            setPaidAmount(String(updated.paid_amount ?? 0));
+        }
+
+        const payments = await getDailyCustomerPayments(editingId);
+        setDailyPayments(payments || []);
+        setPaymentAmount('');
+
+        Alert.alert(
+            'Payment Received',
+            `₹${amount.toFixed(2)} payment save ho gayi.`
+        );
+    } catch (error) {
+        console.error('Receive payment failed:', error);
+        Alert.alert('Error', 'Payment save nahi hui.');
+    } finally {
+        setPaymentSaving(false);
+    }
+};
+
+const deletePayment = (paymentId: number) => {
+    Alert.alert(
+        'Delete Payment',
+        'Kya aap ye payment delete karna chahte hain?',
+        [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await deleteDailyCustomerPayment(paymentId);
+
+                        if (editingId) {
+                            const updated = await getDailyCustomerEntryById(editingId);
+                            if (updated) {
+                                setPaidAmount(String(updated.paid_amount ?? 0));
+                            }
+
+                            const payments =
+                                await getDailyCustomerPayments(editingId);
+
+                            setDailyPayments(payments || []);
+                        }
+                    } catch (error) {
+                        console.error('Delete payment failed:', error);
+                        Alert.alert('Error', 'Payment delete nahi hui.');
+                    }
+                },
+            },
+        ]
+    );
+};
+
+const saveEntry = async () => {
   if (!customerName.trim()) {
     Alert.alert('Validation', 'Customer Name is required');
     return;
@@ -525,6 +633,173 @@ Available stock: ${availableStock}`
       />
 
     <Text style={styles.label}>Payment Mode</Text>
+                {editingId && (
+                    <View
+                        style={{
+                            marginTop: 18,
+                            padding: 16,
+                            borderRadius: 14,
+                            backgroundColor: '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor: '#E5E7EB',
+                        }}
+                    >
+                        <Text style={{
+                            fontSize: 18,
+                            fontWeight: '700',
+                            color: '#111827',
+                            marginBottom: 12,
+                        }}>
+                            Receive Payment
+                        </Text>
+
+                        <Text style={styles.label}>Payment Amount</Text>
+
+                        <TextInput
+                            style={styles.input}
+                            value={paymentAmount}
+                            onChangeText={setPaymentAmount}
+                            keyboardType="numeric"
+                            placeholder="0"
+                            placeholderTextColor="#9CA3AF"
+                        />
+
+                        <Text style={{
+                            marginTop: 8,
+                            fontSize: 14,
+                            color: '#6B7280',
+                        }}>
+                            Current Balance: ₹{Math.max(
+                                Number(billAmount) - Number(paidAmount),
+                                0
+                            ).toFixed(2)}
+                        </Text>
+
+                        <Text style={styles.label}>Receive Payment Mode</Text>
+
+                        <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                            {['Cash', 'UPI', 'Bank'].map((mode) => (
+                                <Pressable
+                                    key={mode}
+                                    onPress={() =>
+                                        setPaymentModeReceive(mode as 'Cash')
+                                    }
+                                    style={{
+                                        paddingHorizontal: 14,
+                                        paddingVertical: 9,
+                                        borderRadius: 10,
+                                        marginRight: 8,
+                                        backgroundColor:
+                                            paymentModeReceive === mode
+                                                ? '#16A34A'
+                                                : '#E5E7EB',
+                                    }}
+                                >
+                                    <Text style={{
+                                        color:
+                                            paymentModeReceive === mode
+                                                ? '#FFFFFF'
+                                                : '#111827',
+                                        fontWeight: '600',
+                                    }}>
+                                        {mode}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+
+                        <Pressable
+                            onPress={receivePayment}
+                            disabled={paymentSaving}
+                            style={{
+                                paddingVertical: 13,
+                                borderRadius: 10,
+                                alignItems: 'center',
+                                backgroundColor: paymentSaving
+                                    ? '#9CA3AF'
+                                    : '#16A34A',
+                            }}
+                        >
+                            <Text style={{
+                                color: '#FFFFFF',
+                                fontSize: 16,
+                                fontWeight: '700',
+                            }}>
+                                {paymentSaving ? 'Saving...' : 'Receive Payment'}
+                            </Text>
+                        </Pressable>
+
+                        {dailyPayments.length > 0 && (
+                            <View style={{ marginTop: 18 }}>
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: '700',
+                                    color: '#111827',
+                                    marginBottom: 10,
+                                }}>
+                                    Payment History
+                                </Text>
+
+                                {dailyPayments.map((payment) => (
+                                    <View
+                                        key={payment.id}
+                                        style={{
+                                            padding: 12,
+                                            marginBottom: 8,
+                                            borderRadius: 10,
+                                            backgroundColor: '#FFFFFF',
+                                            borderWidth: 1,
+                                            borderColor: '#E5E7EB',
+                                        }}
+                                    >
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}>
+                                            <View>
+                                                <Text style={{
+                                                    fontSize: 16,
+                                                    fontWeight: '700',
+                                                    color: '#111827',
+                                                }}>
+                                                    ₹{Number(payment.amount || 0).toFixed(2)}
+                                                </Text>
+
+                                                <Text style={{
+                                                    marginTop: 3,
+                                                    fontSize: 13,
+                                                    color: '#6B7280',
+                                                }}>
+                                                    {payment.payment_mode || 'Cash'} • {payment.payment_time || ''}
+                                                </Text>
+                                            </View>
+
+                                            <Pressable
+                                                onPress={() =>
+                                                    deletePayment(Number(payment.id))
+                                                }
+                                                style={{
+                                                    paddingHorizontal: 12,
+                                                    paddingVertical: 8,
+                                                    borderRadius: 8,
+                                                    backgroundColor: '#FEE2E2',
+                                                }}
+                                            >
+                                                <Text style={{
+                                                    color: '#DC2626',
+                                                    fontWeight: '700',
+                                                }}>
+                                                    Delete
+                                                </Text>
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                )}
 
       <View style={{ flexDirection: 'row', marginBottom: 8 }}>
         {['Cash', 'UPI', 'Bank'].map((mode) => (

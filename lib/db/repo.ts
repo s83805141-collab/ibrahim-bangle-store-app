@@ -1783,6 +1783,189 @@ export async function getDailySalesReport(startDate: number, endDate: number): P
 // DAILY CUSTOMER ENTRIES
 // ============================================================
 
+
+export interface DailyCustomerPayment {
+  id?: number;
+  daily_customer_entry_id: number;
+  amount: number;
+  payment_mode: string;
+  payment_date: number;
+  payment_time: string;
+  transaction_number: string;
+  payment_photo: string;
+  note: string;
+  created_at?: number;
+}
+
+export async function addDailyCustomerPayment(
+  payment: DailyCustomerPayment
+): Promise<number> {
+  const db = await getDb();
+  const now = Date.now();
+
+  const res = await db.exec(
+    `INSERT INTO daily_customer_payments
+    (
+      daily_customer_entry_id,
+      amount,
+      payment_mode,
+      payment_date,
+      payment_time,
+      transaction_number,
+      payment_photo,
+      note,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    [
+      payment.daily_customer_entry_id,
+      Number(payment.amount) || 0,
+      payment.payment_mode || 'Cash',
+      payment.payment_date || now,
+      payment.payment_time || '',
+      payment.transaction_number || '',
+      payment.payment_photo || '',
+      payment.note || '',
+      now,
+    ]
+  );
+
+  if (res.insertId === undefined) {
+    throw new Error('Failed to create daily customer payment');
+  }
+
+  const totalRes = await db.exec(
+    `SELECT COALESCE(SUM(amount), 0) AS total
+     FROM daily_customer_payments
+     WHERE daily_customer_entry_id = ?`,
+    [payment.daily_customer_entry_id]
+  );
+
+  const totalPaid =
+    Number(totalRes.rows._array?.[0]?.total) || 0;
+
+  const entryRes = await db.exec(
+    `SELECT bill_amount
+     FROM daily_customer_entries
+     WHERE id = ?`,
+    [payment.daily_customer_entry_id]
+  );
+
+  if (entryRes.rows.length > 0) {
+    const billAmount =
+      Number(entryRes.rows._array?.[0]?.bill_amount) || 0;
+
+    const balance = Math.max(billAmount - totalPaid, 0);
+    const status = balance <= 0 ? 'Paid' : 'Partial';
+
+    await db.exec(
+      `UPDATE daily_customer_entries
+       SET paid_amount = ?,
+           balance_amount = ?,
+           payment_mode = ?,
+           payment_status = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        totalPaid,
+        balance,
+        payment.payment_mode || 'Cash',
+        status,
+        now,
+        payment.daily_customer_entry_id,
+      ]
+    );
+  }
+
+  return res.insertId;
+}
+
+export async function recalculateDailyCustomerPayment(
+  entryId: number
+): Promise<void> {
+  const db = await getDb();
+
+  const paymentRes = await db.exec(
+    `SELECT COALESCE(SUM(amount), 0) AS total_paid
+     FROM daily_customer_payments
+     WHERE daily_customer_entry_id = ?`,
+    [entryId]
+  );
+
+  const entryRes = await db.exec(
+    `SELECT bill_amount
+     FROM daily_customer_entries
+     WHERE id = ?`,
+    [entryId]
+  );
+
+  if (entryRes.rows.length === 0) return;
+
+  const totalPaid =
+    Number(paymentRes.rows._array[0]?.total_paid) || 0;
+
+  const billAmount =
+    Number(entryRes.rows._array[0]?.bill_amount) || 0;
+
+  const balance = Math.max(billAmount - totalPaid, 0);
+  const status = balance <= 0 ? 'Paid' : 'Pending';
+
+  await db.exec(
+    `UPDATE daily_customer_entries
+     SET paid_amount = ?,
+         balance_amount = ?,
+         payment_status = ?,
+         updated_at = ?
+     WHERE id = ?`,
+    [
+      totalPaid,
+      balance,
+      status,
+      Date.now(),
+      entryId,
+    ]
+  );
+}
+
+export async function deleteDailyCustomerPayment(
+  paymentId: number
+): Promise<void> {
+  const db = await getDb();
+
+  const paymentRes = await db.exec(
+    'SELECT daily_customer_entry_id FROM daily_customer_payments WHERE id = ? LIMIT 1',
+    [paymentId]
+  );
+
+  if (paymentRes.rows.length === 0) return;
+
+  const entryId =
+    paymentRes.rows._array[0].daily_customer_entry_id;
+
+  await db.exec(
+    'DELETE FROM daily_customer_payments WHERE id = ?',
+    [paymentId]
+  );
+
+  await recalculateDailyCustomerPayment(entryId);
+}
+
+export async function getDailyCustomerPayments(
+  entryId: number
+): Promise<DailyCustomerPayment[]> {
+  const db = await getDb();
+
+  const res = await db.exec(
+    `SELECT *
+     FROM daily_customer_payments
+     WHERE daily_customer_entry_id = ?
+     ORDER BY payment_date DESC, id DESC`,
+    [entryId]
+  );
+
+  return (res.rows._array || []) as DailyCustomerPayment[];
+}
+
 export interface DailyCustomerEntry {
   id?: number;
   customer_id?: number | null;
