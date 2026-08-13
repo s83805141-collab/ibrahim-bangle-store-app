@@ -25,9 +25,27 @@ export default function DailyCustomerEntryScreen() {
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [billPhoto, setBillPhoto] = useState('');
   const [products, setProducts] = useState<any[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [productLoadError, setProductLoadError] = useState('');
-  const [productQuantity, setProductQuantity] = useState('1');
+
+  type DailyCustomerLineItem = {
+    productId: number | null;
+    variantId: number | null;
+    productName: string;
+    quantity: string;
+    unit: string;
+    unitPrice: string;
+  };
+
+  const [lineItems, setLineItems] = useState<DailyCustomerLineItem[]>([
+    {
+      productId: null,
+      variantId: null,
+      productName: '',
+      quantity: '1',
+      unit: 'Piece',
+      unitPrice: '',
+    },
+  ]);
   const heartScale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     getAllProducts()
@@ -72,9 +90,49 @@ export default function DailyCustomerEntryScreen() {
     return () => pulse.stop();
   }, [heartScale]);
 
-  const bill = Number(billAmount) || 0;
-  const paid = Number(paidAmount) || 0;
-  const balance = Math.max(0, bill - paid);
+  const updateLineItem = (
+  index: number,
+  field: keyof DailyCustomerLineItem,
+  value: any
+) => {
+  setLineItems(prev =>
+    prev.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    )
+  );
+};
+
+const addLineItem = () => {
+  setLineItems(prev => [
+    ...prev,
+    {
+      productId: null,
+      variantId: null,
+      productName: '',
+      quantity: '',
+      unit: 'Piece',
+      unitPrice: '',
+    },
+  ]);
+};
+
+const removeLineItem = (index: number) => {
+  setLineItems(prev => {
+    if (prev.length === 1) return prev;
+    return prev.filter((_, i) => i !== index);
+  });
+};
+
+const lineTotal = (item: DailyCustomerLineItem) =>
+  (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+
+const bill = lineItems.reduce(
+  (sum, item) => sum + lineTotal(item),
+  0
+);
+
+const paid = Number(paidAmount) || 0;
+const balance = Math.max(0, bill - paid);
   const entryDate = new Date().toLocaleString('en-IN');
 
   const sendCustomerDetails = async (type: 'whatsapp' | 'sms') => {
@@ -119,43 +177,76 @@ export default function DailyCustomerEntryScreen() {
   }
 
   try {
-    if (selectedProduct && !editingId) {
-      const qty = Number(productQuantity) || 0;
-      const availableStock = Number(selectedProduct.total_stock) || 0;
+    const validItems = lineItems.filter(
+      item => item.productId && Number(item.quantity) > 0
+    );
 
-      if (qty <= 0) {
-        Alert.alert('Validation', 'Quantity 1 ya usse zyada honi chahiye');
-        return;
-      }
-
-      if (availableStock < qty) {
-        Alert.alert(
-          'Insufficient Stock',
-          `Available stock: ${availableStock}`
-        );
-        return;
-      }
-
-      await deductProductStock(
-        selectedProduct.id,
-        null,
-        qty
+    if (validItems.length === 0) {
+      Alert.alert(
+        'Validation',
+        'Kam se kam ek product aur quantity add karein'
       );
+      return;
     }
 
-    await addDailyCustomerEntry({
-      customer_name: customerName.trim(),
-      mobile: mobile.trim(),
-      bill_no: billNo.trim(),
-      bill_amount: bill,
-      paid_amount: paid,
-      balance_amount: balance,
-      payment_mode: paymentMode,
-      payment_status: balance > 0 ? 'Pending' : 'Paid',
-      bill_photo: billPhoto,
-      payment_photo: '',
-      notes: '',
-    });
+    if (!editingId) {
+      for (const item of validItems) {
+        const product = products.find(p => p.id === item.productId);
+        const qty = Number(item.quantity) || 0;
+        const availableStock = Number(product?.total_stock) || 0;
+
+        if (qty <= 0) {
+          Alert.alert(
+            'Validation',
+            'Quantity 1 ya usse zyada honi chahiye'
+          );
+          return;
+        }
+
+        if (availableStock < qty) {
+          Alert.alert(
+            'Insufficient Stock',
+            `${item.productName}
+Available stock: ${availableStock}`
+          );
+          return;
+        }
+      }
+
+      for (const item of validItems) {
+        await deductProductStock(
+          item.productId!,
+          item.variantId,
+          Number(item.quantity)
+        );
+      }
+    }
+
+    const items = validItems.map(item => ({
+      product_id: item.productId!,
+      variant_id: item.variantId,
+      quantity: Number(item.quantity) || 0,
+      unit: item.unit || 'Piece',
+      unit_price: Number(item.unitPrice) || 0,
+      total: lineTotal(item),
+    }));
+
+    await addDailyCustomerEntry(
+      {
+        customer_name: customerName.trim(),
+        mobile: mobile.trim(),
+        bill_no: billNo.trim(),
+        bill_amount: bill,
+        paid_amount: paid,
+        balance_amount: balance,
+        payment_mode: paymentMode,
+        payment_status: balance > 0 ? 'Pending' : 'Paid',
+        bill_photo: billPhoto,
+        payment_photo: '',
+        notes: '',
+      },
+      items
+    );
 
     Alert.alert(
       'Success',
@@ -231,82 +322,209 @@ export default function DailyCustomerEntryScreen() {
 
         <Text style={styles.label}>Select Product</Text>
 
-        {productLoadError ? (
-          <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEE2E2' }}>
-            <Text style={{ color: '#B91C1C', fontWeight: '600' }}>
-              Product loading error:
-            </Text>
-            <Text style={{ color: '#B91C1C', marginTop: 4 }}>
-              {productLoadError}
-            </Text>
-          </View>
-        ) : products.length === 0 ? (
-          <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEF3C7' }}>
-            <Text style={{ color: '#92400E', fontWeight: '600' }}>
-              Koi product nahi mila
-            </Text>
-            <Text style={{ color: '#92400E', marginTop: 4 }}>
-              Total products loaded: 0
-            </Text>
-          </View>
-        ) : (
-          <Text style={{ marginBottom: 8, color: '#166534', fontWeight: '600' }}>
-            Total products: {products.length}
+      {productLoadError ? (
+        <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEE2E2' }}>
+          <Text style={{ color: '#B91C1C', fontWeight: '600' }}>
+            Product loading error:
           </Text>
-        )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-          {products.map((product) => (
-            <Pressable
-              key={product.id}
-              onPress={() => {
-                setSelectedProduct(product);
-                const qty = Number(productQuantity) || 1;
-                setBillAmount(String((product.sale_price || 0) * qty));
-              }}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                borderRadius: 10,
-                marginRight: 8,
-                backgroundColor: selectedProduct?.id === product.id ? '#2563EB' : '#EEF2FF',
-              }}
-            >
-              <Text style={{ color: selectedProduct?.id === product.id ? '#FFFFFF' : '#111827', fontWeight: '600' }}>
-                {product.name}
-              </Text>
-              <Text style={{ color: selectedProduct?.id === product.id ? '#FFFFFF' : '#4B5563', marginTop: 2 }}>
-                ₹{Number(product.sale_price || 0).toFixed(2)}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+          <Text style={{ color: '#B91C1C', marginTop: 4 }}>
+            {productLoadError}
+          </Text>
+        </View>
+      ) : products.length === 0 ? (
+        <View style={{ padding: 10, marginBottom: 8, borderRadius: 8, backgroundColor: '#FEF3C7' }}>
+          <Text style={{ color: '#92400E', fontWeight: '600' }}>
+            Koi product nahi mila
+          </Text>
+          <Text style={{ color: '#92400E', marginTop: 4 }}>
+            Total products loaded: 0
+          </Text>
+        </View>
+      ) : (
+        <Text style={{ marginBottom: 8, color: '#166534', fontWeight: '600' }}>
+          Total products: {products.length}
+        </Text>
+      )}
 
-        {selectedProduct && (
-          <View style={{ marginBottom: 8 }}>
-            <Text style={styles.label}>Quantity</Text>
-            <TextInput
-              style={styles.input}
-              value={productQuantity}
-              onChangeText={(value) => {
-                setProductQuantity(value);
-                const qty = Number(value) || 0;
-                setBillAmount(String((selectedProduct.sale_price || 0) * qty));
-              }}
-              keyboardType="numeric"
-              placeholder="1"
-              placeholderTextColor="#9CA3AF"
-            />
-
-            <Text style={{ marginTop: 8, fontSize: 16, fontWeight: '700', color: '#111827' }}>
-              Sale Price: ₹{Number(selectedProduct.sale_price || 0).toFixed(2)} × {Number(productQuantity) || 0}
+      {lineItems.map((item, index) => (
+        <View
+          key={index}
+          style={{
+            marginBottom: 14,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: '#E5E7EB',
+            borderRadius: 12,
+            backgroundColor: '#F9FAFB',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>
+              Product {index + 1}
             </Text>
 
-            <Text style={{ marginTop: 6, fontSize: 14, fontWeight: '600', color: '#2563EB' }}>
-              Available Stock: {Number(selectedProduct.total_stock || 0)}
-            </Text>
+            {lineItems.length > 1 && (
+              <Pressable onPress={() => removeLineItem(index)}>
+                <Text style={{ color: '#DC2626', fontWeight: '700' }}>
+                  Delete
+                </Text>
+              </Pressable>
+            )}
           </View>
-        )}
-        <Text style={styles.label}>Payment Mode</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 8 }}
+          >
+            {products.map((product) => {
+              const selected = item.productId === product.id;
+
+              return (
+                <Pressable
+                  key={product.id}
+                  onPress={() => {
+                    updateLineItem(index, 'productId', product.id);
+                    updateLineItem(index, 'variantId', null);
+                    updateLineItem(index, 'productName', product.name);
+                    updateLineItem(
+                      index,
+                      'unitPrice',
+                      String(product.sale_price || 0)
+                    );
+                  }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    marginRight: 8,
+                    backgroundColor: selected ? '#2563EB' : '#EEF2FF',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: selected ? '#FFFFFF' : '#111827',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {product.name}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: selected ? '#FFFFFF' : '#4B5563',
+                      marginTop: 2,
+                    }}
+                  >
+                    ₹{Number(product.sale_price || 0).toFixed(2)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {item.productId && (
+            <View>
+              <Text style={styles.label}>Quantity</Text>
+
+              <TextInput
+                style={styles.input}
+                value={item.quantity}
+                onChangeText={(value) =>
+                  updateLineItem(index, 'quantity', value)
+                }
+                keyboardType="numeric"
+                placeholder="1"
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <Text style={styles.label}>Unit</Text>
+
+              <TextInput
+                style={styles.input}
+                value={item.unit}
+                onChangeText={(value) =>
+                  updateLineItem(index, 'unit', value)
+                }
+                placeholder="Piece"
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <Text style={styles.label}>Price</Text>
+
+              <TextInput
+                style={styles.input}
+                value={item.unitPrice}
+                onChangeText={(value) =>
+                  updateLineItem(index, 'unitPrice', value)
+                }
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: '#111827',
+                }}
+              >
+                Total: ₹{lineTotal(item).toFixed(2)}
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 6,
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: '#2563EB',
+                }}
+              >
+                Available Stock:{' '}
+                {Number(
+                  products.find(p => p.id === item.productId)?.total_stock || 0
+                )}
+              </Text>
+            </View>
+          )}
+        </View>
+      ))}
+
+      <Pressable
+        onPress={addLineItem}
+        style={{
+          alignSelf: 'flex-start',
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 10,
+          backgroundColor: '#EEF2FF',
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ color: '#2563EB', fontWeight: '700' }}>
+          + Add Product
+        </Text>
+      </Pressable>
+
+      <Text style={styles.label}>Bill Amount</Text>
+
+      <TextInput
+        style={styles.input}
+        value={bill.toFixed(2)}
+        editable={false}
+        placeholder="0"
+        placeholderTextColor="#9CA3AF"
+      />
+
+    <Text style={styles.label}>Payment Mode</Text>
 
       <View style={{ flexDirection: 'row', marginBottom: 8 }}>
         {['Cash', 'UPI', 'Bank'].map((mode) => (

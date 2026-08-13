@@ -333,6 +333,24 @@ CREATE TABLE IF NOT EXISTS transport_receipts (
 );
 `;
 
+export const MIGRATION_SQL_5 = `
+ALTER TABLE daily_customer_entries ADD COLUMN customer_id INTEGER DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS daily_customer_entry_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  daily_customer_entry_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  variant_id INTEGER,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  unit TEXT NOT NULL DEFAULT 'Piece',
+  unit_price REAL NOT NULL DEFAULT 0,
+  total REAL NOT NULL DEFAULT 0,
+  FOREIGN KEY (daily_customer_entry_id) REFERENCES daily_customer_entries(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id)
+);
+`;
+
 export const SEED_CATEGORIES = [
   'Toda',
   'Plain Toda',

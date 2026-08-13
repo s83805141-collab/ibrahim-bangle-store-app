@@ -1785,6 +1785,7 @@ export async function getDailySalesReport(startDate: number, endDate: number): P
 
 export interface DailyCustomerEntry {
   id?: number;
+  customer_id?: number | null;
   customer_name: string;
   mobile: string;
   bill_no: string;
@@ -1800,8 +1801,20 @@ export interface DailyCustomerEntry {
   updated_at?: number;
 }
 
+export interface DailyCustomerEntryItem {
+  id?: number;
+  daily_customer_entry_id?: number;
+  product_id: number;
+  variant_id?: number | null;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  total: number;
+}
+
 export async function addDailyCustomerEntry(
-  entry: DailyCustomerEntry
+  entry: DailyCustomerEntry,
+  items: DailyCustomerEntryItem[] = []
 ): Promise<number> {
   const db = await getDb();
   const now = Date.now();
@@ -1809,6 +1822,7 @@ export async function addDailyCustomerEntry(
   const res = await db.exec(
     `INSERT INTO daily_customer_entries
     (
+      customer_id,
       customer_name,
       mobile,
       bill_no,
@@ -1823,8 +1837,9 @@ export async function addDailyCustomerEntry(
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
+      entry.customer_id ?? null,
       entry.customer_name || '',
       entry.mobile || '',
       entry.bill_no || '',
@@ -1841,9 +1856,38 @@ export async function addDailyCustomerEntry(
     ]
   );
 
-  return res.insertId!;
-}
+  const entryId = res.insertId;
+  if (entryId === undefined) {
+    throw new Error('Failed to create daily customer entry');
+  }
 
+  for (const item of items) {
+    await db.exec(
+      `INSERT INTO daily_customer_entry_items
+      (
+        daily_customer_entry_id,
+        product_id,
+        variant_id,
+        quantity,
+        unit,
+        unit_price,
+        total
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [
+        entryId,
+        item.product_id,
+        item.variant_id ?? null,
+        Number(item.quantity) || 0,
+        item.unit || 'Piece',
+        Number(item.unit_price) || 0,
+        Number(item.total) || 0,
+      ]
+    );
+  }
+
+  return entryId;
+}
 
 export async function getDailyCustomerEntryById(
   id: number
