@@ -147,8 +147,46 @@ const BACKUP_VERSION = 1;
 const AUTO_BACKUP_TIME_KEY = 'automatic_backup_last_run';
 const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000;
 
+const AUTO_BACKUP_ENABLED_KEY = 'automatic_backup_enabled';
+
+export async function isAutomaticBackupEnabled(): Promise<boolean> {
+  try {
+    const db = await getDb();
+    const result = await db.exec(
+      'SELECT value FROM settings WHERE key = ?',
+      [AUTO_BACKUP_ENABLED_KEY]
+    );
+
+    const value = result.rows._array[0]?.value;
+
+    // Default = ON, ताकि existing automatic backup behavior बना रहे।
+    return value === undefined ? true : value === '1';
+  } catch (error) {
+    console.error('Could not read automatic backup setting:', error);
+    return true;
+  }
+}
+
+export async function setAutomaticBackupEnabled(
+  enabled: boolean
+): Promise<void> {
+  const db = await getDb();
+
+  await db.exec(
+    'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+    [AUTO_BACKUP_ENABLED_KEY, enabled ? '1' : '0']
+  );
+}
+
 export async function runAutomaticBackup(): Promise<void> {
   try {
+    const enabled = await isAutomaticBackupEnabled();
+
+    if (!enabled) {
+      console.log('Automatic backup is OFF');
+      return;
+    }
+
     const db = await getDb();
 
     const result = await db.exec(

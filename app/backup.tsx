@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,19 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DatabaseBackup, Upload, FileJson, ShieldCheck, AlertCircle, Info, Share2, Copy, Check } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { Button, ScreenHeader } from '@/components/ui';
-import { exportBackup, importBackup, downloadBackupFile } from '../lib/db/database';
+import {
+  exportBackup,
+  importBackup,
+  downloadBackupFile,
+  isAutomaticBackupEnabled,
+  setAutomaticBackupEnabled,
+} from '../lib/db/database';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -20,6 +27,50 @@ export default function BackupScreen() {
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [automaticBackupEnabled, setAutomaticBackupEnabledState] = useState(true);
+  const [loadingAutomaticBackup, setLoadingAutomaticBackup] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const enabled = await isAutomaticBackupEnabled();
+        if (mounted) {
+          setAutomaticBackupEnabledState(enabled);
+        }
+      } catch (error) {
+        console.error('Could not load automatic backup setting:', error);
+      } finally {
+        if (mounted) {
+          setLoadingAutomaticBackup(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleAutomaticBackupToggle = useCallback(async (enabled: boolean) => {
+    setAutomaticBackupEnabledState(enabled);
+
+    try {
+      await setAutomaticBackupEnabled(enabled);
+      setStatus(
+        enabled
+          ? 'Automatic backup enabled.'
+          : 'Automatic backup disabled.'
+      );
+    } catch (error: any) {
+      setAutomaticBackupEnabledState(!enabled);
+      Alert.alert(
+        'Error',
+        error?.message || 'Could not change automatic backup setting.'
+      );
+    }
+  }, []);
 
   const handleExportAndShare = useCallback(async () => {
     setBusy('export');
@@ -110,6 +161,45 @@ export default function BackupScreen() {
               <Text style={styles.timestamp}>Last backup: {lastBackup}</Text>
             </View>
           )}
+        </Animated.View>
+
+        {/* Automatic Backup Card */}
+        <Animated.View
+          entering={FadeInDown.duration(300).delay(60)}
+          style={styles.card}
+        >
+          <View style={styles.cardHeader}>
+            <View
+              style={[
+                styles.cardIcon,
+                { backgroundColor: MD3Colors.primaryContainer },
+              ]}
+            >
+              <DatabaseBackup
+                size={22}
+                color={MD3Colors.primary}
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Automatic Backup</Text>
+              <Text style={styles.cardDesc}>
+                Automatically save a complete local backup once every 24 hours.
+              </Text>
+            </View>
+
+            <Switch
+              value={automaticBackupEnabled}
+              onValueChange={handleAutomaticBackupToggle}
+              disabled={loadingAutomaticBackup}
+            />
+          </View>
+
+          <Text style={styles.featureText}>
+            {automaticBackupEnabled
+              ? 'Automatic backup is ON'
+              : 'Automatic backup is OFF'}
+          </Text>
         </Animated.View>
 
         {/* Restore Card */}

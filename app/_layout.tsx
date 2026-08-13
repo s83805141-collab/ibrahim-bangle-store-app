@@ -2,12 +2,21 @@
 
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import { runAutomaticBackup } from '@/lib/db/database';
+import {
+  runAutomaticBackup,
+  isAutomaticBackupEnabled,
+} from '@/lib/db/database';
 
 const AUTO_BACKUP_TASK = 'SINGLE_FILE_AUTO_BACKUP';
 
 TaskManager.defineTask(AUTO_BACKUP_TASK, async () => {
   try {
+    const enabled = await isAutomaticBackupEnabled();
+
+    if (!enabled) {
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+
     await runAutomaticBackup();
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error) {
