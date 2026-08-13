@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -5,7 +6,14 @@ import {
   BarChart3, DatabaseBackup, Settings, ClipboardList, BookOpen, Landmark,
   ChevronRight, Search, History, Receipt,
 } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui';
 
@@ -30,7 +38,25 @@ const MENU_ITEMS = [
 
 export default function MenuScreen() {
   const router = useRouter();
-  return (
+
+  const dailyCustomerPulse = useSharedValue(1);
+
+  const dailyCustomerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dailyCustomerPulse.value }],
+  }));
+
+  React.useEffect(() => {
+    dailyCustomerPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.055, { duration: 180 }),
+        withTiming(1, { duration: 180 }),
+        withTiming(1, { duration: 700 })
+      ),
+      -1,
+      false
+    );
+  }, []);
+    return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: MD3Spacing.lg, paddingBottom: 140 }}>
       <ScreenHeader title="More" subtitle="All sections" />
       <View style={styles.grid}>
@@ -38,7 +64,16 @@ export default function MenuScreen() {
           const Icon = item.icon;
           return (
             <Pressable key={item.title} onPress={() => router.push(item.route as any)}>
-              <Animated.View entering={FadeInDown.duration(250).delay(index * 40)} style={styles.menuCard}>
+              <Animated.View
+                entering={FadeInDown.duration(250).delay(index * 40)}
+                style={[
+                  styles.menuCard,
+                  item.title === 'Daily Customer' && {
+                    backgroundColor: '#39FF14',
+                    },,
+                  item.title === 'Daily Customer' && dailyCustomerAnimatedStyle
+                ]}
+              >
                 <View style={[styles.menuIcon, { backgroundColor: item.bg }]}>
                   <Icon size={24} color={item.color} strokeWidth={2.2} />
                 </View>
