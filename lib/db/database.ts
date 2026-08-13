@@ -144,6 +144,60 @@ export type { DatabaseAdapter, QueryResult } from './types';
 const BACKUP_KEY = 'ibrahim_bangle_store_db';
 const BACKUP_VERSION = 1;
 
+const AUTO_BACKUP_TIME_KEY = 'automatic_backup_last_run';
+const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000;
+
+export async function runAutomaticBackup(): Promise<void> {
+  try {
+    const db = await getDb();
+
+    const result = await db.exec(
+      'SELECT value FROM settings WHERE key = ?',
+      [AUTO_BACKUP_TIME_KEY]
+    );
+
+    const lastBackup = Number(result.rows._array[0]?.value || 0);
+    const now = Date.now();
+
+    if (lastBackup > 0 && now - lastBackup < AUTO_BACKUP_INTERVAL) {
+      return;
+    }
+
+    // Create the same complete backup used by the existing Backup screen.
+    const backup = await exportBackup();
+
+    // Save the automatic backup as a real local file.
+    const documentDirectory = FileSystem.documentDirectory;
+
+    if (!documentDirectory) {
+      throw new Error('App document directory is unavailable');
+    }
+
+    const backupFilePath = documentDirectory + 'auto_backup.json';
+
+    await FileSystem.writeAsStringAsync(
+      backupFilePath,
+      backup,
+      {
+        encoding: FileSystem.EncodingType.UTF8,
+      }
+    );
+
+    // Store only the timestamp in SQLite.
+    await db.exec(
+      'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+      [AUTO_BACKUP_TIME_KEY, String(now)]
+    );
+
+    console.log(
+      'Automatic backup completed successfully:',
+      backupFilePath
+    );
+  } catch (error) {
+    console.error('Automatic backup failed:', error);
+  }
+}
+
 export interface BackupPayload {
   version: number;
   exported_at: number;
