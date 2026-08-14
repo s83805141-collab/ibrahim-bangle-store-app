@@ -2267,7 +2267,7 @@ export async function deductProductStock(
   }
 }
 
-export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
+export async function getDailyCustomerEntries(): Promise<any[]> {
   const db = await getDb();
 
   const res = await db.exec(
@@ -2276,6 +2276,29 @@ export async function getDailyCustomerEntries(): Promise<DailyCustomerEntry[]> {
      ORDER BY created_at DESC`
   );
 
-  return (res.rows._array || []) as DailyCustomerEntry[];
+  const entries = res.rows._array || [];
+
+  for (const entry of entries) {
+    const itemsRes = await db.exec(
+      `SELECT
+         i.id,
+         i.product_id,
+         i.variant_id,
+         i.quantity,
+         i.unit,
+         i.unit_price,
+         i.total,
+         p.name AS product_name
+       FROM daily_customer_entry_items i
+       LEFT JOIN products p ON p.id = i.product_id
+       WHERE i.daily_customer_entry_id = ?
+       ORDER BY i.id ASC`,
+      [entry.id]
+    );
+
+    entry.items = itemsRes.rows._array || [];
+  }
+
+  return entries;
 }
 

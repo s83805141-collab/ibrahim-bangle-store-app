@@ -69,6 +69,32 @@ export default function DailyCustomerHistoryScreen() {
               <Text style={styles.mode}>
                 {item.payment_mode || 'Cash'}
               </Text>
+
+              {item.items?.length > 0 ? (
+                <View style={styles.productsBox}>
+                  <Text style={styles.productsTitle}>Products Sold</Text>
+
+                  {item.items.map((product: any, index: number) => (
+                    <View key={`${product.id}-${index}`} style={styles.productRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.productName}>
+                          {product.product_name || 'Product'}
+                        </Text>
+
+                        <Text style={styles.productDetail}>
+                          {Number(product.quantity) || 0} {product.unit || 'Piece'}
+                          {' × '}
+                          ₹{(Number(product.unit_price) || 0).toFixed(2)}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.productTotal}>
+                        ₹{(Number(product.total) || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             <Pressable
@@ -169,6 +195,47 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: '#2563EB',
     fontWeight: '600',
+  },
+
+  productsBox: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+  },
+
+  productsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+
+  productDetail: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+
+  productTotal: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginLeft: 10,
   },
   editButton: {
     alignSelf: 'center',
