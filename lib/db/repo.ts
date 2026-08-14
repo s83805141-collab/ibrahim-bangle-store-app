@@ -1927,6 +1927,93 @@ export async function recalculateDailyCustomerPayment(
   );
 }
 
+
+export async function deleteDailyCustomerEntry(
+  entryId: number
+): Promise<void> {
+  const db = await getDb();
+
+  const entryRes = await db.exec(
+    `SELECT id FROM daily_customer_entries WHERE id = ? LIMIT 1`,
+    [entryId]
+  );
+
+  if (entryRes.rows.length === 0) {
+    throw new Error('Daily customer entry not found');
+  }
+
+  const itemsRes = await db.exec(
+    `SELECT product_id, variant_id, quantity
+     FROM daily_customer_entry_items
+     WHERE daily_customer_entry_id = ?`,
+    [entryId]
+  );
+
+  // Restore stock for every item.
+  for (const item of itemsRes.rows._array || []) {
+    const productId = Number(item.product_id);
+    const variantId =
+      item.variant_id === null || item.variant_id === undefined
+        ? null
+        : Number(item.variant_id);
+    const quantity = Number(item.quantity) || 0;
+
+    if (quantity <= 0) continue;
+
+    if (variantId) {
+      await db.exec(
+        `UPDATE product_variants
+         SET quantity = quantity + ?
+         WHERE id = ?`,
+        [quantity, variantId]
+      );
+    } else {
+      // When no variant was selected, restore to the first
+      // variant belonging to that product.
+      const variantRes = await db.exec(
+        `SELECT id
+         FROM product_variants
+         WHERE product_id = ?
+         ORDER BY id
+         LIMIT 1`,
+        [productId]
+      );
+
+      if (variantRes.rows.length > 0) {
+        const restoreVariantId = variantRes.rows._array[0].id;
+
+        await db.exec(
+          `UPDATE product_variants
+           SET quantity = quantity + ?
+           WHERE id = ?`,
+          [quantity, restoreVariantId]
+        );
+      }
+    }
+  }
+
+  // Delete payment history first.
+  await db.exec(
+    `DELETE FROM daily_customer_payments
+     WHERE daily_customer_entry_id = ?`,
+    [entryId]
+  );
+
+  // Delete product items.
+  await db.exec(
+    `DELETE FROM daily_customer_entry_items
+     WHERE daily_customer_entry_id = ?`,
+    [entryId]
+  );
+
+  // Finally delete the customer entry.
+  await db.exec(
+    `DELETE FROM daily_customer_entries
+     WHERE id = ?`,
+    [entryId]
+  );
+}
+
 export async function deleteDailyCustomerPayment(
   paymentId: number
 ): Promise<void> {
