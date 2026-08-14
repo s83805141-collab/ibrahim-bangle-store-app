@@ -18,6 +18,7 @@ import {
   downloadBackupFile,
   isAutomaticBackupEnabled,
   setAutomaticBackupEnabled,
+  getLastAutomaticBackup,
 } from '../lib/db/database';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -38,6 +39,14 @@ export default function BackupScreen() {
         const enabled = await isAutomaticBackupEnabled();
         if (mounted) {
           setAutomaticBackupEnabledState(enabled);
+
+          const automaticLastRun = await getLastAutomaticBackup();
+
+          if (automaticLastRun > 0) {
+            setLastBackup(
+              new Date(automaticLastRun).toLocaleString('en-IN')
+            );
+          }
         }
       } catch (error) {
         console.error('Could not load automatic backup setting:', error);
@@ -200,6 +209,16 @@ export default function BackupScreen() {
               ? 'Automatic backup is ON'
               : 'Automatic backup is OFF'}
           </Text>
+
+          {automaticBackupEnabled && (
+            <View style={styles.autoBackupStatus}>
+              <Text style={styles.autoBackupStatusText}>
+                {lastBackup
+                  ? `Last automatic backup: ${lastBackup}`
+                  : 'No automatic backup has run yet'}
+              </Text>
+            </View>
+          )}
         </Animated.View>
 
         {/* Restore Card */}
@@ -281,6 +300,19 @@ const styles = StyleSheet.create({
   timestampRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: MD3Spacing.sm },
   timestamp: { fontFamily: 'Roboto-Regular', fontSize: 11, color: MD3Colors.onSurfaceVariant },
   featureRow: { flexDirection: 'row', alignItems: 'center', marginTop: MD3Spacing.xs, gap: 8 },
+  autoBackupStatus: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: MD3Colors.surfaceVariant,
+  },
+  autoBackupStatusText: {
+    fontFamily: 'Roboto-Regular',
+    fontSize: 12,
+    color: MD3Colors.onSurfaceVariant,
+  },
+
   featureText: { fontFamily: 'Roboto-Regular', fontSize: 13, color: MD3Colors.onSurface },
   statusBox: {
     flexDirection: 'row',

@@ -178,6 +178,22 @@ export async function setAutomaticBackupEnabled(
   );
 }
 
+export async function getLastAutomaticBackup(): Promise<number> {
+  try {
+    const db = await getDb();
+
+    const result = await db.exec(
+      'SELECT value FROM settings WHERE key = ?',
+      [AUTO_BACKUP_TIME_KEY]
+    );
+
+    return Number(result.rows._array[0]?.value || 0);
+  } catch (error) {
+    console.error('Could not read last automatic backup:', error);
+    return 0;
+  }
+}
+
 export async function runAutomaticBackup(): Promise<void> {
   try {
     const enabled = await isAutomaticBackupEnabled();
