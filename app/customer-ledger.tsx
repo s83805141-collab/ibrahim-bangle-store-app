@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Linking } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { BookOpen, ArrowDownLeft, ArrowUpRight, Trash2, Users, Wallet, ShoppingCart, ChevronLeft } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
@@ -51,6 +51,48 @@ export default function CustomerLedgerScreen() {
 
   const formatRs = (n: number) => 'Rs ' + (n || 0).toLocaleString('en-PK');
   const formatDate = (ts: number) => new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const sendBalanceOnWhatsApp = async () => {
+    if (!selectedCustomer) return;
+
+    const phone = String(
+      selectedCustomer.whatsapp || selectedCustomer.phone || ''
+    ).replace(/\D/g, '');
+
+    if (!phone) {
+      Alert.alert(
+        'WhatsApp Number Missing',
+        'Customer ka WhatsApp number save nahi hai.'
+      );
+      return;
+    }
+
+    const balance = Number(selectedCustomer.outstanding_balance) || 0;
+
+    if (balance <= 0) {
+      Alert.alert(
+        'No Balance',
+        'Customer ka koi outstanding balance nahi hai.'
+      );
+      return;
+    }
+
+    const message =
+      `Ibrahim Bangle Store\n\n` +
+      `Dear ${selectedCustomer.name},\n\n` +
+      `Aapka outstanding balance ₹${balance.toFixed(2)} hai.\n` +
+      `Kripya pending amount clear kar dein.\n\n` +
+      `Thank you.`;
+
+    try {
+      const url =
+        `whatsapp://send?phone=91${phone}&text=${encodeURIComponent(message)}`;
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('WhatsApp open failed:', error);
+      Alert.alert('Error', 'WhatsApp open nahi ho saka.');
+    }
+  };
 
   const handleDeleteEntry = (entry: CustomerLedgerEntry) => {
     if (entry.ref_type !== 'manual_payment') {
@@ -192,7 +234,19 @@ export default function CustomerLedgerScreen() {
         <Text style={styles.backText}>All Customers</Text>
       </TouchableOpacity>
 
-      <PaymentModal
+      {selectedCustomer.outstanding_balance > 0 ? (
+      <TouchableOpacity
+        style={styles.whatsappBalanceButton}
+        onPress={sendBalanceOnWhatsApp}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.whatsappBalanceText}>
+          Send Balance on WhatsApp
+        </Text>
+      </TouchableOpacity>
+    ) : null}
+
+    <PaymentModal
         visible={paymentModalVisible}
         customerId={selectedCustomer.id}
         onClose={() => setPaymentModalVisible(false)}
@@ -323,6 +377,20 @@ const styles = StyleSheet.create({
   saleFooter: { flexDirection: 'row', alignItems: 'center', gap: MD3Spacing.sm, flexWrap: 'wrap' },
   salePaidText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.success },
   saleBalText: { fontFamily: 'Roboto-Medium', fontSize: 12, color: MD3Colors.error },
+  whatsappBalanceButton: {
+    marginHorizontal: MD3Spacing.lg,
+    marginBottom: MD3Spacing.md,
+    paddingVertical: MD3Spacing.md,
+    borderRadius: MD3Radius.lg,
+    backgroundColor: MD3Colors.primary,
+    alignItems: 'center',
+    ...MD3Elevation.level1,
+  },
+  whatsappBalanceText: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 14,
+    color: MD3Colors.onPrimary,
+  },
   backBtn: {
     position: 'absolute', bottom: 24, left: 24,
     flexDirection: 'row', alignItems: 'center', gap: 4,
