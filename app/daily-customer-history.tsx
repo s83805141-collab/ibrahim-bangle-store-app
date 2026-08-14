@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getDailyCustomerEntries } from '@/lib/db/repo';
+import { getDailyCustomerEntries, deleteDailyCustomerEntry } from '@/lib/db/repo';
 
 export default function DailyCustomerHistoryScreen() {
   const router = useRouter();
@@ -82,7 +82,34 @@ export default function DailyCustomerHistoryScreen() {
             >
               <Text style={styles.editText}>✏️ Edit</Text>
             </Pressable>
-          </View>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={() => {
+              Alert.alert(
+                'Delete Customer',
+                `Kya aap ${item.customer_name} ki entry delete karna chahte hain?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await deleteDailyCustomerEntry(Number(item.id));
+                        await loadEntries();
+                      } catch (error) {
+                        console.error('Delete customer failed:', error);
+                        Alert.alert('Error', 'Customer entry delete nahi hui');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Text style={styles.deleteText}>Delete</Text>
+          </Pressable>
+        </View>
         )}
       />
     </View>
@@ -153,6 +180,18 @@ const styles = StyleSheet.create({
   },
   editText: {
     color: '#2563EB',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    alignSelf: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  deleteText: {
+    color: '#DC2626',
     fontWeight: '700',
   },
 });
