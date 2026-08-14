@@ -184,6 +184,45 @@ const balance = Math.max(0, bill - paid);
   };
 
   
+const sendRemainingBalanceOnWhatsApp = async () => {
+  if (!mobile.trim()) {
+    Alert.alert('Mobile Number', 'Customer ka mobile number enter karein.');
+    return;
+  }
+
+  const remainingBalance = Math.max(
+    Number(billAmount) - Number(paidAmount),
+    0
+  );
+
+  if (remainingBalance <= 0) {
+    Alert.alert(
+      'No Balance',
+      'Customer ka koi remaining balance nahi hai.'
+    );
+    return;
+  }
+
+  const message =
+    'Ibrahim Bangle Store\n\n' +
+    `Dear ${customerName.trim() || '-'},\n\n` +
+    `Bill No: ${billNo.trim() || '-'}\n` +
+    `Remaining Balance: ₹${remainingBalance.toFixed(2)}\n\n` +
+    'Kripya pending amount clear kar dein.\n\n' +
+    'Thank you.';
+
+  try {
+    const phone = mobile.replace(/\D/g, '');
+    const url =
+      `whatsapp://send?phone=91${phone}&text=${encodeURIComponent(message)}`;
+
+    await Linking.openURL(url);
+  } catch (error) {
+    console.error('Remaining balance WhatsApp failed:', error);
+    Alert.alert('Error', 'WhatsApp open nahi ho saka.');
+  }
+};
+
 const receivePayment = async () => {
     if (!editingId) {
         Alert.alert('Save Entry', 'Pehle customer entry save karein.');
@@ -895,7 +934,18 @@ Available stock: ${availableStock}`
         </Pressable>
       </View>
 
-      <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+      {balance > 0 ? (
+    <Pressable
+      style={styles.remainingBalanceWhatsappButton}
+      onPress={sendRemainingBalanceOnWhatsApp}
+    >
+      <Text style={styles.remainingBalanceWhatsappText}>
+        Send Remaining Balance on WhatsApp
+      </Text>
+    </Pressable>
+  ) : null}
+
+  <Animated.View style={{ transform: [{ scale: heartScale }] }}>
         <Pressable
           style={styles.saveButton}
           onPress={saveEntry}
@@ -1030,6 +1080,20 @@ const styles = StyleSheet.create({
   },
 
   shareButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  remainingBalanceWhatsappButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
+    alignItems: 'center',
+  },
+
+  remainingBalanceWhatsappText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
