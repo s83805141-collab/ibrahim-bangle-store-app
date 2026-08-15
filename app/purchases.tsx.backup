@@ -8,7 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { pickImage } from '@/lib/imagePicker';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
-  getAllPurchases, getAllSuppliersFull, getAllProducts, getAllBankAccounts, addPurchase, updatePurchase, getPurchaseById, deletePurchase,
+  getAllPurchases, getAllSuppliersFull, getAllProducts, getAllBankAccounts, addPurchase, deletePurchase,
   UNITS,
   SupplierWithStats, ProductWithDetails, PurchaseHeaderWithDetails, PurchaseItemInput, PurchaseHeader,
   SupplierPaymentInput, BankAccount,
@@ -24,7 +24,6 @@ export default function PurchasesScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailPurchase, setDetailPurchase] = useState<PurchaseHeaderWithDetails | null>(null);
-  const [editPurchase, setEditPurchase] = useState<PurchaseHeaderWithDetails | null>(null);
 
   const load = useCallback(async () => {
     try { setPurchases(await getAllPurchases()); } finally { setLoading(false); }
@@ -73,10 +72,6 @@ export default function PurchasesScreen() {
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => setDetailPurchase(item)}>
                   <Text style={[styles.actionText, { color: MD3Colors.warning }]}>View Details</Text>
-                </TouchableOpacity>
-                <View style={styles.actionDivider} />
-                <TouchableOpacity style={styles.actionBtn} onPress={() => setEditPurchase(item)}>
-                  <Text style={[styles.actionText, { color: MD3Colors.primary }]}>Edit</Text>
                 </TouchableOpacity>
                 <View style={styles.actionDivider} />
                 <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
@@ -441,116 +436,6 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
   );
 }
 
-
-function PurchaseEditModal({
-  purchase,
-  onClose,
-  onSaved,
-}: {
-  purchase: PurchaseHeaderWithDetails | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleEdit = async () => {
-    if (!purchase) return;
-
-    try {
-      setSaving(true);
-      setError('');
-
-      const fresh = await getPurchaseById(purchase.id);
-
-      if (!fresh) {
-        throw new Error('Purchase not found');
-      }
-
-      Alert.alert(
-        'Edit Purchase',
-        'Purchase editing form integration is ready. Existing products can be loaded from this purchase.',
-        [{ text: 'OK' }]
-      );
-    } catch (e: any) {
-      setError(e.message || 'Failed to load purchase');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal
-      visible={!!purchase}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.detailModal}>
-          <View style={styles.detailHeader}>
-            <Text style={styles.detailTitle}>Edit Purchase</Text>
-            <TouchableOpacity onPress={onClose}>
-              <X size={22} color={MD3Colors.onSurface} />
-            </TouchableOpacity>
-          </View>
-
-          {purchase ? (
-            <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-              <Text style={styles.detailLabel}>Supplier</Text>
-              <Text style={styles.detailValue}>{purchase.supplier_name}</Text>
-
-              <Text style={styles.detailLabel}>Invoice</Text>
-              <Text style={styles.detailValue}>
-                {purchase.invoice_number || `#${purchase.id}`}
-              </Text>
-
-              <Text style={styles.detailLabel}>Products</Text>
-
-              {purchase.items.map((item) => (
-                <View key={item.id} style={styles.detailItem}>
-                  <Text style={styles.detailItemName}>
-                    {item.product_name}
-                  </Text>
-                  <Text style={styles.detailItemMeta}>
-                    {item.quantity} {item.unit} × {formatRsLocal(item.unit_price)}
-                  </Text>
-                  <Text style={styles.detailItemTotal}>
-                    {formatRsLocal(item.total)}
-                  </Text>
-                </View>
-              ))}
-
-              <Text style={styles.detailTotal}>
-                Total: {formatRsLocal(purchase.grand_total || purchase.subtotal)}
-              </Text>
-
-              {error ? (
-                <Text style={styles.errorText}>{error}</Text>
-              ) : null}
-
-              <TouchableOpacity
-                style={styles.editPurchaseButton}
-                onPress={handleEdit}
-                disabled={saving}
-              >
-                <Text style={styles.editPurchaseButtonText}>
-                  {saving ? 'Loading...' : 'Load Purchase'}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          ) : null}
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function formatRsLocal(n: number) {
-  return 'Rs ' + (n || 0).toLocaleString('en-PK');
-}
-
-
 function PurchaseDetailModal({ purchase, onClose, formatRs, formatDate }: { purchase: PurchaseHeaderWithDetails | null; onClose: () => void; formatRs: (n: number) => string; formatDate: (ts: number) => string }) {
   if (!purchase) return null;
   return (
@@ -643,20 +528,6 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', gap: MD3Spacing.sm, flexWrap: 'wrap' },
   cardAmount: { fontFamily: 'Roboto-Bold', fontSize: 17, color: MD3Colors.accent, marginTop: 2 },
   cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: MD3Colors.outlineVariant },
-
-  editPurchaseButton: {
-    marginTop: MD3Spacing.lg,
-    paddingVertical: MD3Spacing.md,
-    borderRadius: MD3Radius.md,
-    alignItems: 'center',
-    backgroundColor: MD3Colors.primary,
-  },
-  editPurchaseButtonText: {
-    color: MD3Colors.onPrimary,
-    fontFamily: 'Roboto-Bold',
-    fontSize: 15,
-  },
-
   actionBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: MD3Spacing.sm + 2, gap: 6 },
   actionDivider: { width: 1, backgroundColor: MD3Colors.outlineVariant, marginVertical: MD3Spacing.xs },
   actionText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant, fontWeight: '600' },
@@ -741,11 +612,6 @@ modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'f
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
   modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, backgroundColor: MD3Colors.surface, position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 24, ...MD3Elevation.level3 },
   hintText: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant, textAlign: 'center', padding: MD3Spacing.xl },
-  detailModal: { flex: 1, backgroundColor: MD3Colors.surface, marginTop: 60, borderTopLeftRadius: MD3Radius.xl, borderTopRightRadius: MD3Radius.xl, overflow: 'hidden' },
-  detailHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
-  detailTitle: { fontFamily: 'Roboto-Bold', fontSize: 18, color: MD3Colors.onSurface },
-  detailItem: { backgroundColor: MD3Colors.surfaceVariant, borderRadius: MD3Radius.md, padding: MD3Spacing.sm, marginBottom: MD3Spacing.xs },
-  detailTotal: { fontFamily: 'Roboto-Bold', fontSize: 16, color: MD3Colors.accent, textAlign: 'right' },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: MD3Spacing.sm, borderBottomWidth: 1, borderBottomColor: MD3Colors.outlineVariant },
   detailLabel: { fontFamily: 'Roboto-Regular', fontSize: 14, color: MD3Colors.onSurfaceVariant },
   detailValue: { fontFamily: 'Roboto-Medium', fontSize: 14, color: MD3Colors.onSurface },
