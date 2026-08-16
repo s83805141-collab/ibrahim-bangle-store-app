@@ -231,7 +231,15 @@ const styles = StyleSheet.create({
   marginBottom: Platform.OS === 'android' ? 30 : 0,
   ...MD3Elevation.level5,
 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderBottomWidth: 1.5, borderBotto[...]
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: MD3Spacing.lg,
+    paddingVertical: MD3Spacing.md,
+    borderBottomWidth: 1.5,
+    borderBottomColor: MD3Colors.outlineVariant,
+  },
   modalTitle: { fontFamily: 'Roboto-Bold', fontSize: 20, color: MD3Colors.onSurface },
   modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: MD3Colors.surfaceVariant, justifyContent: 'center', alignItems: 'center' },
   modalBody: { padding: MD3Spacing.lg },
@@ -244,7 +252,15 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: MD3Colors.onPrimary },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   modalFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm },
-  modalStickyFooter: { flexDirection: 'row', paddingHorizontal: MD3Spacing.lg, paddingVertical: MD3Spacing.md, borderTopWidth: 1.5, borderTopColor: MD3Colors.outlineVariant, gap: MD3Spacing.sm, b[...]
+  modalStickyFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: MD3Spacing.lg,
+    paddingVertical: MD3Spacing.md,
+    borderTopWidth: 1.5,
+    borderTopColor: MD3Colors.outlineVariant,
+    gap: MD3Spacing.sm,
+    backgroundColor: MD3Colors.surface,
+  },
   photoWrap: { alignItems: 'center', marginBottom: MD3Spacing.md },
   photoBtn: { width: 96, height: 96, borderRadius: 48, overflow: 'hidden', borderWidth: 2, borderColor: MD3Colors.outlineVariant },
   photoImg: { width: '100%', height: '100%' },
