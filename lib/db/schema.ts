@@ -369,11 +369,10 @@ CREATE TABLE IF NOT EXISTS daily_customer_payments (
 );
 `;
 
-// NEW migration for quick_bill feature
 export const MIGRATION_SQL_7 = `
 CREATE TABLE IF NOT EXISTS quick_bill_headers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  bill_number TEXT DEFAULT '',
+  bill_number TEXT DEFAULT "",
   created_at INTEGER NOT NULL,
   total_amount REAL NOT NULL DEFAULT 0,
   item_count INTEGER NOT NULL DEFAULT 0

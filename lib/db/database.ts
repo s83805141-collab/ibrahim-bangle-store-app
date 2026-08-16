@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, MIGRATION_SQL_5, MIGRATION_SQL_6, SEED_CATEGORIES } from './schema';
+import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, MIGRATION_SQL_5, MIGRATION_SQL_6, MIGRATION_SQL_7, SEED_CATEGORIES } from './schema';
 import type { DatabaseAdapter } from './types';
 import {
   exportAllImages,
@@ -101,13 +101,13 @@ export async function resetDatabase(): Promise<void> {
 // Run ALTER TABLE migrations safely. SQLite doesn't support "IF NOT EXISTS"
 // for ADD COLUMN, so we check the current columns via PRAGMA table_info.
 async function runMigration(db: DatabaseAdapter): Promise<void> {
-  for (const migration of [MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, MIGRATION_SQL_5, MIGRATION_SQL_6]) {
+  for (const migration of [MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, MIGRATION_SQL_5, MIGRATION_SQL_6, MIGRATION_SQL_7]) {
     if (!migration || migration.trim().length === 0) continue;
     
     const statements = migration
       .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0);
     
     for (const stmt of statements) {
       const upper = stmt.toUpperCase();
