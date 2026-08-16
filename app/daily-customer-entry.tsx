@@ -154,22 +154,27 @@ const balance = Math.max(0, bill - paid);
       return;
     }
 
+    const computedBill = lineItems.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
+    const billToUse = Number(billAmount) || computedBill || 0;
+    const paidToUse = Number(paidAmount) || 0;
+    const balanceToUse = Math.max(billToUse - paidToUse, 0);
+
     const message =
       `Ibrahim Bangle Store\n` +
       `Customer: ${customerName.trim() || '-'}\n` +
       `Bill No: ${billNo.trim() || '-'}\n` +
-      `Bill Amount: ₹${bill.toFixed(2)}\n` +
-      `Paid: ₹${paid.toFixed(2)}\n` +
-      `Balance: ₹${balance.toFixed(2)}\n` +
+      `Bill Amount: ₹${billToUse.toFixed(2)}\n` +
+      `Paid: ₹${paidToUse.toFixed(2)}\n` +
+      `Balance: ₹${balanceToUse.toFixed(2)}\n` +
       `Payment Mode: ${paymentMode}`;
 
     try {
       if (type === 'whatsapp') {
-        const phone = mobile.replace(/\\D/g, '');
+        const phone = mobile.replace(/\D/g, '');
         const url = `whatsapp://send?phone=91${phone}&text=${encodeURIComponent(message)}`;
         await Linking.openURL(url);
       } else {
-        const url = `sms:${mobile.replace(/\\D/g, '')}?body=${encodeURIComponent(message)}`;
+        const url = `sms:${mobile.replace(/\D/g, '')}?body=${encodeURIComponent(message)}`;
         await Linking.openURL(url);
       }
     } catch (error) {
@@ -353,8 +358,7 @@ const saveEntry = async () => {
         if (availableStock < qty) {
           Alert.alert(
             'Insufficient Stock',
-            `${item.productName}
-Available stock: ${availableStock}`
+            `${item.productName}\nAvailable stock: ${availableStock}`
           );
           return;
         }
@@ -869,81 +873,81 @@ Available stock: ${availableStock}`
 
       <Text style={styles.label}>Bill Photo</Text>
 
-      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-        <Pressable
-          onPress={async () => {
-            const uri = await pickImagePersistent({ quality: 0.7 });
-            if (uri) setBillPhoto(uri);
-          }}
-          style={styles.photoButton}
-        >
-          <Text style={styles.photoButtonText}>📁 Gallery</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+          <Pressable
+            onPress={async () => {
+              const uri = await pickImagePersistent({ quality: 0.7 });
+              if (uri) setBillPhoto(uri);
+            }}
+            style={styles.photoButton}
+          >
+            <Text style={styles.photoButtonText}>📁 Gallery</Text>
+          </Pressable>
 
-        <Pressable
-          onPress={async () => {
-            const uri = await takePhotoPersistent({ quality: 0.7 });
-            if (uri) setBillPhoto(uri);
-          }}
-          style={styles.photoButton}
-        >
-          <Text style={styles.photoButtonText}>📷 Camera</Text>
-        </Pressable>
-      </View>
-
-      {billPhoto ? (
-        <Text style={styles.photoSelected}>✓ Bill photo selected</Text>
-      ) : null}
-
-      <Text style={styles.label}>Date & Time</Text>
-
-      <Text style={styles.dateTimeText}>{entryDate}</Text>
-
-      <Text style={styles.label}>Paid Amount</Text>
-
-        <TextInput
-          style={styles.input}
-          value={paidAmount}
-          onChangeText={setPaidAmount}
-          placeholder="0"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-        />
-
-        <View style={styles.balanceBox}>
-          <Text style={styles.balanceLabel}>Balance</Text>
-
-          <Text style={styles.balanceValue}>
-            ₹{balance.toFixed(2)}
-          </Text>
+          <Pressable
+            onPress={async () => {
+              const uri = await takePhotoPersistent({ quality: 0.7 });
+              if (uri) setBillPhoto(uri);
+            }}
+            style={styles.photoButton}
+          >
+            <Text style={styles.photoButtonText}>📷 Camera</Text>
+          </Pressable>
         </View>
 
-        <View style={styles.shareRow}>
-        <Pressable
-          style={styles.whatsappButton}
-          onPress={() => sendCustomerDetails('whatsapp')}
-        >
-          <Text style={styles.shareButtonText}>💬 WhatsApp</Text>
-        </Pressable>
+        {billPhoto ? (
+          <Text style={styles.photoSelected}>✓ Bill photo selected</Text>
+        ) : null}
 
-        <Pressable
-          style={styles.smsButton}
-          onPress={() => sendCustomerDetails('sms')}
-        >
-          <Text style={styles.shareButtonText}>📱 SMS</Text>
-        </Pressable>
-      </View>
+        <Text style={styles.label}>Date & Time</Text>
 
-      {balance > 0 ? (
-    <Pressable
-      style={styles.remainingBalanceWhatsappButton}
-      onPress={sendRemainingBalanceOnWhatsApp}
-    >
-      <Text style={styles.remainingBalanceWhatsappText}>
-        Send Remaining Balance on WhatsApp
-      </Text>
-    </Pressable>
-  ) : null}
+        <Text style={styles.dateTimeText}>{entryDate}</Text>
+
+        <Text style={styles.label}>Paid Amount</Text>
+
+          <TextInput
+            style={styles.input}
+            value={paidAmount}
+            onChangeText={setPaidAmount}
+            placeholder="0"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+          />
+
+          <View style={styles.balanceBox}>
+            <Text style={styles.balanceLabel}>Balance</Text>
+
+            <Text style={styles.balanceValue}>
+              ₹{balance.toFixed(2)}
+            </Text>
+          </View>
+
+          <View style={styles.shareRow}>
+          <Pressable
+            style={styles.whatsappButton}
+            onPress={() => sendCustomerDetails('whatsapp')}
+          >
+            <Text style={styles.shareButtonText}>💬 WhatsApp</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.smsButton}
+            onPress={() => sendCustomerDetails('sms')}
+          >
+            <Text style={styles.shareButtonText}>📱 SMS</Text>
+          </Pressable>
+        </View>
+
+        {balance > 0 ? (
+      <Pressable
+        style={styles.remainingBalanceWhatsappButton}
+        onPress={sendRemainingBalanceOnWhatsApp}
+      >
+        <Text style={styles.remainingBalanceWhatsappText}>
+          Send Remaining Balance on WhatsApp
+        </Text>
+      </Pressable>
+    ) : null}
 
   <Animated.View style={{ transform: [{ scale: heartScale }] }}>
         <Pressable
