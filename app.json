@@ -1,5 +1,4 @@
 {
-
   "expo": {
     "name": "Ibrahim Bangle Store",
     "slug": "ibrahim-bangle-store",
@@ -56,7 +55,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "62001018-4893-41cf-8a08-a035a7d8e86a"
+        "projectId": "78966e78-7929-4fc8-9911-bc0811ffec78"
       }
     },
     "owner": "saad786786s-team"
