@@ -5,7 +5,7 @@ import { BookOpen, ArrowDownLeft, ArrowUpRight, Trash2, Users, Wallet, ShoppingC
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation, MD3Gradients } from '@/lib/theme';
 import {
   getAllCustomersFull, getCustomerLedgerWithRunningBalance,
-  getSalesByCustomer, addCustomerPayment, deleteCustomerLedgerEntry,
+  getSalesByCustomer, getCustomerById, addCustomerPayment, deleteCustomerLedgerEntry,
   CustomerWithStats, CustomerLedgerEntry, CustomerLedgerEntryWithBalance, SaleHeaderWithDetails, PAYMENT_METHODS,
 } from '@/lib/db/repo';
 import type { PaymentMethod } from '@/lib/db/schema';
@@ -14,7 +14,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CustomerLedgerScreen() {
-  const params = useLocalSearchParams<{ customerId?: string }>();
+  const params = useLocalSearchParams<{ customerId?: string; openPayment?: string }>();
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithStats | null>(null);
   const [ledgerEntries, setLedgerEntries] = useState<CustomerLedgerEntryWithBalance[]>([]);
@@ -30,12 +30,18 @@ export default function CustomerLedgerScreen() {
       if (params.customerId) {
         const id = parseInt(params.customerId);
         const c = custs.find(x => x.id === id);
-        if (c) await selectCustomer(c);
+        if (c) {
+          await selectCustomer(c);
+          // auto-open payment modal when requested
+          if (params.openPayment === '1' || params.openPayment === 'true') {
+            setPaymentModalVisible(true);
+          }
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [params.customerId]);
+  }, [params.customerId, params.openPayment]);
 
   useFocusEffect(useCallback(() => { loadCustomers(); }, [loadCustomers]));
 
@@ -153,7 +159,7 @@ export default function CustomerLedgerScreen() {
           <Text style={styles.summaryCardLabel}>Total Paid</Text>
           <Text style={[styles.summaryCardValue, { color: MD3Colors.success }]}>{formatRs(selectedCustomer.total_paid)}</Text>
         </Animated.View>
-        <Animated.View entering={FadeIn.duration(300).delay(160)} style={[styles.summaryCard, selectedCustomer.outstanding_balance > 0 ? { backgroundColor: MD3Colors.errorContainer } : { backgroundColor: MD3Colors.surfaceVariant }]}>
+        <Animated.View entering={FadeIn.duration(300).delay(160)} style={[styles.summaryCard, selectedCustomer.outstanding_balance > 0 ? { backgroundColor: MD3Colors.errorContainer } : { backgroundColor: MD3Colors.surface }]}>
           <Text style={styles.summaryCardLabel}>Outstanding</Text>
           <Text style={[styles.summaryCardValue, selectedCustomer.outstanding_balance > 0 ? { color: MD3Colors.error } : { color: MD3Colors.onSurface }]}>{formatRs(selectedCustomer.outstanding_balance)}</Text>
         </Animated.View>
@@ -276,7 +282,48 @@ function PaymentModal({ visible, customerId, onClose, onSaved }: { visible: bool
     if (amt <= 0) { setError('Enter a valid amount'); return; }
     setSaving(true);
     try {
+      // fetch previous balance BEFORE saving payment
+      const prev = await getCustomerById(customerId);
+      const prevBalance = Number(prev?.outstanding_balance) || 0;
+
+      // save payment first
       await addCustomerPayment(customerId, amt, new Date(date).getTime(), method, txnNumber.trim(), note.trim());
+
+      // compute remaining
+      const remaining = Math.max(prevBalance - amt, 0);
+
+      // prepare phone: prefer whatsapp then phone
+      const raw = String(prev?.whatsapp || prev?.phone || '');
+      let clean = raw.replace(/\D/g, '');
+      clean = clean.replace(/^0+/, '');
+      let finalPhone = '';
+      if (clean.length === 10) finalPhone = '91' + clean;
+      else if (clean.length === 12 && clean.startsWith('91')) finalPhone = clean;
+      else if (clean.length > 0) finalPhone = clean;
+
+      const message =
+        `Ibrahim Bangle Store\n\n` +
+        `Customer: ${prev?.name || '-'}\n` +
+        `Previous Balance: ₹${prevBalance.toLocaleString('en-IN')}\n` +
+        `Payment Received: ₹${amt.toLocaleString('en-IN')}\n` +
+        `Payment Mode: ${method}\n` +
+        `Remaining Balance: ₹${remaining.toLocaleString('en-IN')}`;
+
+      if (finalPhone) {
+        try {
+          const url = `whatsapp://send?phone=${finalPhone}&text=${encodeURIComponent(message)}`;
+          await Linking.openURL(url);
+        } catch (e1) {
+          try {
+            const url2 = `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
+            await Linking.openURL(url2);
+          } catch (e2) {
+            console.error('WhatsApp open failed after payment:', e2);
+            // do not undo payment
+          }
+        }
+      }
+
       onSaved();
     } catch (e: any) {
       setError(e.message || 'Failed to save');
