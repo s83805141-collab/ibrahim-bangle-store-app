@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { gzipSync, gunzipSync, strToU8, strFromU8 } from 'fflate';
 
 import { SCHEMA_SQL, MIGRATION_SQL, MIGRATION_SQL_2, MIGRATION_SQL_3, MIGRATION_SQL_4, MIGRATION_SQL_5, MIGRATION_SQL_6, MIGRATION_SQL_7, SEED_CATEGORIES } from './schema';
 import type { DatabaseAdapter } from './types';
@@ -300,7 +301,29 @@ export async function exportBackup(): Promise<string> {
 }
 
 export async function importBackup(jsonStr: string): Promise<void> {
-  const parsed = JSON.parse(jsonStr) as BackupPayload;
+  // Supports both old JSON backups and new compressed backups.
+  let backupText = jsonStr;
+
+  try {
+    const trimmed = jsonStr.trim();
+
+    if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+      const binary = atob(trimmed);
+      const bytes = Uint8Array.from(
+        binary,
+        (c) => c.charCodeAt(0)
+      );
+
+      backupText = strFromU8(gunzipSync(bytes));
+    }
+  } catch (error) {
+    console.warn(
+      'Backup decompression failed, trying plain JSON:',
+      error
+    );
+  }
+
+  const parsed = JSON.parse(backupText) as BackupPayload;
   if (!parsed || typeof parsed.data !== 'string') throw new Error('Invalid backup file');
   if (Platform.OS === 'web') {
     localStorage.setItem(BACKUP_KEY, parsed.data);
@@ -337,12 +360,15 @@ export async function importBackup(jsonStr: string): Promise<void> {
 export async function downloadBackupFile(): Promise<void> {
   const json = await exportBackup();
 
+  // Compress complete backup JSON.
+  const compressed = gzipSync(strToU8(json), { level: 9 });
+
   const fileName = `ibrahim_bangle_backup_${new Date()
     .toISOString()
-    .split('T')[0]}.json`;
+    .split('T')[0]}.json.gz`;
 
   if (Platform.OS === 'web') {
-    const blob = new Blob([json], { type: 'application/json' });
+    const blob = new Blob([compressed], { type: 'application/gzip' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
@@ -356,13 +382,26 @@ export async function downloadBackupFile(): Promise<void> {
   } else {
     const fileUri = FileSystem.documentDirectory + fileName;
 
-    await FileSystem.writeAsStringAsync(
-  fileUri,
-  json
-);
+    let binary = '';
+    const chunkSize = 0x8000;
+
+    for (let i = 0; i < compressed.length; i += chunkSize) {
+      binary += String.fromCharCode(
+        ...compressed.subarray(i, Math.min(i + chunkSize, compressed.length))
+      );
+    }
+
+    const base64 = btoa(binary);
+
+    await FileSystem.writeAsStringAsync(fileUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri);
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/gzip',
+        dialogTitle: 'Save Ibrahim Bangle Store Backup',
+      });
     }
   }
 }
