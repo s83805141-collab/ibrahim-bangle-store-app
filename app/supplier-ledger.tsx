@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, RefreshControl, ScrollView, Alert, TextInput, Modal } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { BookOpen, ArrowDownLeft, ArrowUpRight, Trash2, X, Truck, Wallet, Search, FileText, Filter, ChevronLeft } from 'lucide-react-native';
 import { MD3Colors, MD3Spacing, MD3Radius, MD3Elevation } from '@/lib/theme';
 import {
   getAllSuppliersFull, getSupplierLedgerEntries, getSupplierLedgerTotals,
-  getPurchasesBySupplier, addSupplierPayment, deleteLedgerEntry,
+  getPurchasesBySupplier, addSupplierPayment, addStandaloneSupplierPayment, deleteLedgerEntry,
   getFilteredSupplierLedgerEntries,
   SupplierWithStats, LedgerEntry, PurchaseHeaderWithDetails, PAYMENT_METHODS,
 } from '@/lib/db/repo';
@@ -14,6 +14,7 @@ import { Button, Input, EmptyState, ScreenHeader, FAB, PremiumModal, StatusBadge
 import { WebView } from 'react-native-webview';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Cheque'] as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -363,10 +364,31 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
+
+  const pickPaymentScreenshot = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission Required', 'Please allow gallery access to select a payment screenshot.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.9,
+      selectionLimit: 1,
+    });
+
+    if (!result.canceled && result.assets?.length) {
+      setPaymentScreenshot(result.assets[0].uri);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
-      setAmount(''); setDate(new Date().toISOString().split('T')[0]); setMethod('Cash'); setTxnNumber(''); setNote(''); setError('');
+      setAmount(''); setDate(new Date().toISOString().split('T')[0]); setMethod('Cash'); setTxnNumber(''); setNote(''); setPaymentScreenshot(null); setError('');
     }
   }, [visible]);
 
@@ -375,7 +397,22 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
     if (amt <= 0) { setError('Enter a valid amount'); return; }
     setSaving(true);
     try {
-      await addSupplierPayment(supplierId, amt, new Date(date).getTime(), method, txnNumber.trim(), note.trim());
+      await addStandaloneSupplierPayment(supplierId, {
+        amount: amt,
+        payment_date: new Date(date).getTime(),
+        payment_time: '',
+        payment_mode: method,
+        bank_account_id: null,
+        bank_name: '',
+        account_name: '',
+        account_number: '',
+        upi_id: '',
+        transaction_number: txnNumber.trim(),
+        cheque_number: '',
+        reference_number: '',
+        note: note.trim(),
+        proof_images: paymentScreenshot ? [paymentScreenshot] : [],
+      });
       onSaved();
     } catch (e: any) {
       setError(e.message || 'Failed to save');
@@ -407,7 +444,35 @@ function PaymentModal({ visible, supplierId, onClose, onSaved }: { visible: bool
         ))}
       </View>
       <Input label="Transaction Number" value={txnNumber} onChangeText={setTxnNumber} placeholder="Optional" />
-      <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
+      <TouchableOpacity
+        style={styles.paymentScreenshotButton}
+        onPress={pickPaymentScreenshot}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.paymentScreenshotButtonText}>
+          {paymentScreenshot ? '✓ Payment Screenshot Selected' : '📷 Add Payment Screenshot'}
+        </Text>
+      </TouchableOpacity>
+
+      {paymentScreenshot ? (
+        <View style={styles.paymentScreenshotPreview}>
+          <Text style={styles.paymentScreenshotLabel}>Payment Screenshot</Text>
+          <TouchableOpacity onPress={pickPaymentScreenshot}>
+            <Image
+              source={{ uri: paymentScreenshot }}
+              style={styles.paymentScreenshotImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setPaymentScreenshot(null)}
+            style={styles.removeScreenshotButton}
+          >
+            <Text style={styles.removeScreenshotText}>Remove Screenshot</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </PremiumModal>
   );
@@ -512,6 +577,45 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: MD3Colors.primary, borderColor: MD3Colors.primary },
   chipText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.onSurfaceVariant },
   chipTextSelected: { color: MD3Colors.onPrimary },
+  paymentScreenshotButton: {
+    marginTop: 10,
+    marginBottom: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: MD3Colors.primary,
+    alignItems: 'center',
+  },
+  paymentScreenshotButtonText: {
+    color: MD3Colors.primary,
+    fontFamily: 'Roboto-Bold',
+    fontSize: 14,
+  },
+  paymentScreenshotPreview: {
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: MD3Colors.surfaceVariant,
+  },
+  paymentScreenshotLabel: {
+    color: MD3Colors.onSurface,
+    fontFamily: 'Roboto-Bold',
+    marginBottom: 8,
+  },
+  paymentScreenshotImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+  },
+  removeScreenshotButton: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  removeScreenshotText: {
+    color: MD3Colors.error,
+    fontFamily: 'Roboto-Bold',
+  },
   errorText: { fontFamily: 'Roboto-Medium', fontSize: 13, color: MD3Colors.error, marginTop: MD3Spacing.sm },
   pdfContainer: { flex: 1, backgroundColor: MD3Colors.background },
   pdfToolbar: {
