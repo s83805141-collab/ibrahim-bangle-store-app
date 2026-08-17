@@ -42,6 +42,7 @@ const IMAGE_COLUMNS: ImageColumnConfig[] = [
 
   { table: 'sale_headers', column: 'payment_screenshot' },
   { table: 'purchase_headers', column: 'payment_screenshot' },
+  { table: 'purchase_headers', column: 'bill_photo' },
 ];
 
 function guessMimeType(uri: string): string {
