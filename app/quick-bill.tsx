@@ -262,7 +262,7 @@ export default function QuickBillScreen() {
 
       <ScrollView
         style={styles.body}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 12 }]}
       >
         {lines.map((item, index) => (
           <View key={item.key} style={styles.card}>
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   card: {
-    padding: MD3Spacing.md,
+    padding: 8,
     marginBottom: MD3Spacing.sm,
     borderRadius: MD3Radius.md,
     backgroundColor: MD3Colors.surface,
