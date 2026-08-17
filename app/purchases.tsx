@@ -75,7 +75,10 @@ export default function PurchasesScreen() {
                   <Text style={[styles.actionText, { color: MD3Colors.warning }]}>View Details</Text>
                 </TouchableOpacity>
                 <View style={styles.actionDivider} />
-                <TouchableOpacity style={styles.actionBtn} onPress={() => setEditPurchase(item)}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => {
+                  setEditPurchase(item);
+                  setModalVisible(true);
+                }}>
                   <Text style={[styles.actionText, { color: MD3Colors.primary }]}>Edit</Text>
                 </TouchableOpacity>
                 <View style={styles.actionDivider} />
@@ -90,7 +93,19 @@ export default function PurchasesScreen() {
 
       <FAB onPress={() => setModalVisible(true)} intent="add" icon={Plus} />
 
-      <PurchaseFormModal visible={modalVisible} onClose={() => setModalVisible(false)} onSaved={() => { setModalVisible(false); load(); }} />
+      <PurchaseFormModal
+          visible={modalVisible}
+          editPurchase={editPurchase}
+          onClose={() => {
+            setModalVisible(false);
+            setEditPurchase(null);
+          }}
+          onSaved={() => {
+            setModalVisible(false);
+            setEditPurchase(null);
+            load();
+          }}
+        />
       <PurchaseDetailModal purchase={detailPurchase} onClose={() => setDetailPurchase(null)} formatRs={formatRs} formatDate={formatDate} />
     </View>
   );
@@ -102,7 +117,17 @@ interface PaymentRow {
   upiId: string; transactionNumber: string; chequeNumber: string; referenceNumber: string; note: string; proofImages: string[];
 }
 
-function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; onClose: () => void; onSaved: () => void }) {
+function PurchaseFormModal({
+  visible,
+  editPurchase,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  editPurchase: PurchaseHeaderWithDetails | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [suppliers, setSuppliers] = useState<SupplierWithStats[]>([]);
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -120,6 +145,55 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showProductPicker, setShowProductPicker] = useState<number | null>(null);
+  useEffect(() => {
+    if (!visible) return;
+
+    if (editPurchase) {
+      setSupplierId(editPurchase.supplier_id);
+      setInvoiceNumber(editPurchase.invoice_number || '');
+      setDate(new Date(editPurchase.date).toISOString().split('T')[0]);
+      setDiscount(String(editPurchase.discount || ''));
+      setTransportCharges(String(editPurchase.transport_charges || ''));
+      setOtherCharges(String(editPurchase.other_charges || ''));
+      setNote(editPurchase.note || '');
+      setBillImage(editPurchase.payment_screenshot || '');
+      setError('');
+
+      if (editPurchase.items?.length) {
+        setLineItems(editPurchase.items.map(item => ({
+          productId: item.product_id,
+          variantId: item.variant_id ?? null,
+          productName: item.product_name || '',
+          quantity: String(item.quantity),
+          unit: item.unit,
+          unitPrice: String(item.unit_price || ''),
+          sellingPrice: String(item.selling_price || ''),
+        })));
+      }
+
+      if (editPurchase.payments?.length) {
+        setPayments(editPurchase.payments.map(payment => ({
+          amount: String(payment.amount || ''),
+          paymentDate: new Date(payment.payment_date).toISOString().split('T')[0],
+          paymentTime: payment.payment_time || '',
+          paymentMode: payment.payment_mode || 'Cash',
+          bankAccountId: payment.bank_account_id ?? null,
+          bankName: payment.bank_name || '',
+          accountName: payment.account_name || '',
+          accountNumber: payment.account_number || '',
+          upiId: payment.upi_id || '',
+          transactionNumber: payment.transaction_number || '',
+          chequeNumber: payment.cheque_number || '',
+          referenceNumber: payment.reference_number || '',
+          note: payment.note || '',
+          proofImages: (payment.proof_images || []).map((img: any) => typeof img === 'string' ? img : img.uri || img.path || ''),
+        })));
+      } else {
+        setPayments([]);
+      }
+    }
+  }, [visible, editPurchase]);
+
 
   interface LineItem { productId: number | null; variantId: number | null; productName: string; quantity: string; unit: Unit; unitPrice: string; sellingPrice: string; }
 
@@ -218,7 +292,11 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
         upi_id: paymentInputs[0]?.upi_id || '', reference_number: paymentInputs[0]?.reference_number || '',
         payment_screenshot: billImage,
       };
-      await addPurchase(header, items, paymentInputs);
+      if (editPurchase) {
+        await updatePurchase(editPurchase.id, header, items, paymentInputs);
+      } else {
+        await addPurchase(header, items, paymentInputs);
+      }
       onSaved();
     } catch (e: any) { setError(e.message || 'Failed to save purchase'); } finally { setSaving(false); }
   };
@@ -231,7 +309,9 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>New Purchase</Text>
+            <Text style={styles.modalTitle}>
+              {editPurchase ? 'Edit Purchase' : 'New Purchase'}
+            </Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
@@ -434,7 +514,12 @@ function PurchaseFormModal({ visible, onClose, onSaved }: { visible: boolean; on
               </>
             )}
           </ScrollView>
-          <View style={{ paddingBottom: 34 }}><SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText="Save Purchase" /></View>
+          <View style={{ paddingBottom: 34 }}><SirenButtons
+                onCancel={onClose}
+                onSave={handleSave}
+                cancelText="Cancel"
+                saveText={editPurchase ? 'Update Purchase' : 'Save Purchase'}
+              /></View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
