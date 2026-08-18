@@ -84,7 +84,10 @@ export async function resetDatabase(): Promise<void> {
       'supplier_payments', 'payment_proof_images', 'purchase_items',
       'sale_items', 'purchase_headers', 'sale_headers', 'product_variants',
       'products', 'supplier_ledger', 'customer_ledger', 'bank_accounts',
-      'suppliers', 'customers', 'categories','daily_customer_entries', 'transport_receipts', 'settings',
+      'suppliers', 'customers', 'categories','daily_customer_entries', 'transport_receipts',
+      'quick_bill_headers', 'quick_bill_items',
+      'order_headers', 'order_items', 'order_item_colours',
+      'settings',
     ];
     for (const t of allTables) {
       try {
