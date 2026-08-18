@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pencil, Trash2, Plus } from 'lucide-react-native';
+import { Pencil, Trash2, Plus, FileText } from 'lucide-react-native';
 import {
   getOrderById,
   updateOrder,
@@ -284,14 +284,25 @@ export default function OrderDetailsScreen() {
         </View>
 
         {!editing ? (
-          <Pressable
-            style={styles.iconButton}
-            onPress={() => setEditing(true)}
-          >
-            <Pencil size={19} strokeWidth={2.2} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.iconButton}
+              onPress={() =>
+                router.push(`/order-sheet?id=${orderId}`)
+              }
+            >
+              <FileText size={19} strokeWidth={2.2} />
+            </Pressable>
+
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => setEditing(true)}
+            >
+              <Pencil size={19} strokeWidth={2.2} />
+            </Pressable>
+          </View>
         ) : (
-          <View style={{ width: 40 }} />
+          <View style={{ width: 88 }} />
         )}
       </View>
 
@@ -549,6 +560,11 @@ const styles = StyleSheet.create({
     color: '#777777',
     fontSize: 12,
     marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   iconButton: {
     width: 40,
