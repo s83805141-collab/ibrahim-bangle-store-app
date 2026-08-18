@@ -154,13 +154,23 @@ const balance = Math.max(0, bill - paid);
       return;
     }
 
+    const whatsappBillAmount =
+      Number(billAmount) > 0 ? Number(billAmount) : bill;
+
+    const whatsappPaidAmount = Number(paidAmount) || paid;
+
+    const whatsappBalance = Math.max(
+      whatsappBillAmount - whatsappPaidAmount,
+      0
+    );
+
     const message =
       `Ibrahim Bangle Store\n` +
       `Customer: ${customerName.trim() || '-'}\n` +
       `Bill No: ${billNo.trim() || '-'}\n` +
-      `Bill Amount: ₹${bill.toFixed(2)}\n` +
-      `Paid: ₹${paid.toFixed(2)}\n` +
-      `Balance: ₹${balance.toFixed(2)}\n` +
+      `Bill Amount: ₹${whatsappBillAmount.toFixed(2)}\n` +
+      `Paid: ₹${whatsappPaidAmount.toFixed(2)}\n` +
+      `Balance: ₹${whatsappBalance.toFixed(2)}\n` +
       `Payment Mode: ${paymentMode}`;
 
     try {
