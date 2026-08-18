@@ -27,6 +27,7 @@ import {
   UserRound,
   Lock,
   Calculator,
+  ClipboardList,
 } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -116,6 +117,7 @@ export default function DashboardScreen() {
           <StatCard delay={420} icon={<Receipt size={24} color={MD3Colors.success} strokeWidth={2.2} />} label="New Sale" value="Sell" color={MD3Colors.successContainer} onPress={() => router.push('/(tabs)/sales')} />
           <StatCard delay={480} icon={<UserRound size={24} color={MD3Colors.primary} strokeWidth={2.2} />} label="Daily Customer" value="Open" color={MD3Colors.primaryContainer} onPress={() => router.push('/daily-customer-entry')} />
       <StatCard delay={540} icon={<Calculator size={24} color={MD3Colors.secondary} strokeWidth={2.2} />} label="Calculator" value="Quick Bill" color={MD3Colors.secondaryContainer} onPress={() => router.push('/quick-bill')} />
+              <StatCard delay={600} icon={<ClipboardList size={24} color={MD3Colors.primary} strokeWidth={2.2} />} label="Orders" value="New Order" color={MD3Colors.primaryContainer} onPress={() => router.push('/order-history')} />
         </View>
 
         <Text style={styles.sectionTitle}>Recent Transactions</Text>

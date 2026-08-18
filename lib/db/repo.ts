@@ -2736,3 +2736,275 @@ export async function pruneQuickBills(limit = 25): Promise<void> {
     keepIds
   );
 }
+
+// ==================== ORDERS ====================
+
+export interface OrderHeader {
+  id?: number;
+  order_number: string;
+  party_name: string;
+  order_date: number;
+  note?: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface OrderItemColour {
+  id?: number;
+  order_item_id?: number;
+  colour_name: string;
+  qty_2: number;
+  qty_22: number;
+  qty_24: number;
+  qty_26: number;
+  qty_28: number;
+}
+
+export interface OrderItem {
+  id?: number;
+  order_id?: number;
+  product_id?: number | null;
+  product_name: string;
+  colours: OrderItemColour[];
+}
+
+export interface OrderWithItems {
+  header: OrderHeader;
+  items: OrderItem[];
+}
+
+export async function addOrder(
+  header: Omit<OrderHeader, 'id' | 'created_at' | 'updated_at'>,
+  items: Omit<OrderItem, 'id' | 'order_id'>[]
+): Promise<number> {
+  const db = await getDb();
+  const now = Date.now();
+
+  const result = await db.exec(
+    `INSERT INTO order_headers
+      (order_number, party_name, order_date, note, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      header.order_number,
+      header.party_name,
+      header.order_date,
+      header.note || '',
+      now,
+      now,
+    ]
+  );
+
+  const orderId = Number(result.insertId);
+
+  if (!orderId) {
+    throw new Error('Failed to create order');
+  }
+
+  for (const item of items) {
+    const itemResult = await db.exec(
+      `INSERT INTO order_items
+        (order_id, product_id, product_name)
+       VALUES (?, ?, ?)`,
+      [
+        orderId,
+        item.product_id ?? null,
+        item.product_name,
+      ]
+    );
+
+    const itemId = Number(itemResult.insertId);
+
+    if (!itemId) {
+      throw new Error('Failed to create order item');
+    }
+
+    for (const colour of item.colours || []) {
+      await db.exec(
+        `INSERT INTO order_item_colours
+          (order_item_id, colour_name, qty_2, qty_22, qty_24, qty_26, qty_28)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          itemId,
+          colour.colour_name,
+          colour.qty_2 || 0,
+          colour.qty_22 || 0,
+          colour.qty_24 || 0,
+          colour.qty_26 || 0,
+          colour.qty_28 || 0,
+        ]
+      );
+    }
+  }
+
+  return orderId;
+}
+
+export async function getOrders(): Promise<OrderHeader[]> {
+  const db = await getDb();
+
+  const result = await db.exec(
+    `SELECT
+      id,
+      order_number,
+      party_name,
+      order_date,
+      note,
+      created_at,
+      updated_at
+     FROM order_headers
+     ORDER BY order_date DESC, id DESC`
+  );
+
+  return (result.rows._array || []) as OrderHeader[];
+}
+
+export async function getOrderById(
+  id: number
+): Promise<OrderWithItems | null> {
+  const db = await getDb();
+
+  const headerResult = await db.exec(
+    `SELECT
+      id,
+      order_number,
+      party_name,
+      order_date,
+      note,
+      created_at,
+      updated_at
+     FROM order_headers
+     WHERE id = ?
+     LIMIT 1`,
+    [id]
+  );
+
+  const header = (headerResult.rows._array || [])[0] as
+    | OrderHeader
+    | undefined;
+
+  if (!header) {
+    return null;
+  }
+
+  const itemsResult = await db.exec(
+    `SELECT
+      id,
+      order_id,
+      product_id,
+      product_name
+     FROM order_items
+     WHERE order_id = ?
+     ORDER BY id`,
+    [id]
+  );
+
+  const itemsRows = (itemsResult.rows._array || []) as OrderItem[];
+  const items: OrderItem[] = [];
+
+  for (const item of itemsRows) {
+    const coloursResult = await db.exec(
+      `SELECT
+        id,
+        order_item_id,
+        colour_name,
+        qty_2,
+        qty_22,
+        qty_24,
+        qty_26,
+        qty_28
+       FROM order_item_colours
+       WHERE order_item_id = ?
+       ORDER BY id`,
+      [item.id]
+    );
+
+    items.push({
+      ...item,
+      colours: (coloursResult.rows._array || []) as OrderItemColour[],
+    });
+  }
+
+  return {
+    header,
+    items,
+  };
+}
+
+export async function updateOrder(
+  id: number,
+  header: Omit<OrderHeader, 'id' | 'created_at' | 'updated_at'>,
+  items: Omit<OrderItem, 'id' | 'order_id'>[]
+): Promise<void> {
+  const db = await getDb();
+  const now = Date.now();
+
+  await db.exec(
+    `UPDATE order_headers
+     SET order_number = ?,
+         party_name = ?,
+         order_date = ?,
+         note = ?,
+         updated_at = ?
+     WHERE id = ?`,
+    [
+      header.order_number,
+      header.party_name,
+      header.order_date,
+      header.note || '',
+      now,
+      id,
+    ]
+  );
+
+  await db.exec(
+    `DELETE FROM order_items
+     WHERE order_id = ?`,
+    [id]
+  );
+
+  for (const item of items) {
+    const itemResult = await db.exec(
+      `INSERT INTO order_items
+        (order_id, product_id, product_name)
+       VALUES (?, ?, ?)`,
+      [
+        id,
+        item.product_id ?? null,
+        item.product_name,
+      ]
+    );
+
+    const itemId = Number(itemResult.insertId);
+
+    if (!itemId) {
+      throw new Error('Failed to update order item');
+    }
+
+    for (const colour of item.colours || []) {
+      await db.exec(
+        `INSERT INTO order_item_colours
+          (order_item_id, colour_name, qty_2, qty_22, qty_24, qty_26, qty_28)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          itemId,
+          colour.colour_name,
+          colour.qty_2 || 0,
+          colour.qty_22 || 0,
+          colour.qty_24 || 0,
+          colour.qty_26 || 0,
+          colour.qty_28 || 0,
+        ]
+      );
+    }
+  }
+}
+
+export async function deleteOrder(id: number): Promise<void> {
+  const db = await getDb();
+
+  await db.exec(
+    `DELETE FROM order_headers
+     WHERE id = ?`,
+    [id]
+  );
+}
