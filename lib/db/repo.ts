@@ -2753,6 +2753,8 @@ export interface OrderItemColour {
   id?: number;
   order_item_id?: number;
   colour_name: string;
+  gaddi: number;
+  boxes_per_gaddi: number;
   qty_2: number;
   qty_22: number;
   qty_24: number;
@@ -2783,7 +2785,7 @@ export async function addOrder(
   const result = await db.exec(
     `INSERT INTO order_headers
       (order_number, party_name, order_date, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?);`,
     [
       header.order_number,
       header.party_name,
@@ -2804,7 +2806,7 @@ export async function addOrder(
     const itemResult = await db.exec(
       `INSERT INTO order_items
         (order_id, product_id, product_name)
-       VALUES (?, ?, ?)`,
+       VALUES (?, ?, ?);`,
       [
         orderId,
         item.product_id ?? null,
@@ -2821,11 +2823,14 @@ export async function addOrder(
     for (const colour of item.colours || []) {
       await db.exec(
         `INSERT INTO order_item_colours
-          (order_item_id, colour_name, qty_2, qty_22, qty_24, qty_26, qty_28)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          (order_item_id, colour_name, gaddi, boxes_per_gaddi,
+           qty_2, qty_22, qty_24, qty_26, qty_28)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [
           itemId,
           colour.colour_name,
+          colour.gaddi || 0,
+          colour.boxes_per_gaddi || 0,
           colour.qty_2 || 0,
           colour.qty_22 || 0,
           colour.qty_24 || 0,
@@ -2936,6 +2941,7 @@ export async function updateOrder(
   items: Omit<OrderItem, 'id' | 'order_id'>[]
 ): Promise<void> {
   const db = await getDb();
+
   const now = Date.now();
 
   await db.exec(
@@ -2945,7 +2951,7 @@ export async function updateOrder(
          order_date = ?,
          note = ?,
          updated_at = ?
-     WHERE id = ?`,
+     WHERE id = ?;`,
     [
       header.order_number,
       header.party_name,
@@ -2956,17 +2962,17 @@ export async function updateOrder(
     ]
   );
 
-  await db.exec(
-    `DELETE FROM order_items
-     WHERE order_id = ?`,
-    [id]
-  );
+    await db.exec(
+        `DELETE FROM order_items
+        WHERE order_id = ?;`,
+        [id]
+    );
 
   for (const item of items) {
     const itemResult = await db.exec(
       `INSERT INTO order_items
-        (order_id, product_id, product_name)
-       VALUES (?, ?, ?)`,
+       (order_id, product_id, product_name)
+       VALUES (?, ?, ?);`,
       [
         id,
         item.product_id ?? null,
@@ -2983,11 +2989,14 @@ export async function updateOrder(
     for (const colour of item.colours || []) {
       await db.exec(
         `INSERT INTO order_item_colours
-          (order_item_id, colour_name, qty_2, qty_22, qty_24, qty_26, qty_28)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (order_item_id, colour_name, gaddi, boxes_per_gaddi,
+          qty_2, qty_22, qty_24, qty_26, qty_28)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [
           itemId,
           colour.colour_name,
+          colour.gaddi || 0,
+          colour.boxes_per_gaddi || 0,
           colour.qty_2 || 0,
           colour.qty_22 || 0,
           colour.qty_24 || 0,
@@ -2995,10 +3004,11 @@ export async function updateOrder(
           colour.qty_28 || 0,
         ]
       );
-    }
-  }
 }
 
+}
+
+}
 export async function deleteOrder(id: number): Promise<void> {
   const db = await getDb();
 

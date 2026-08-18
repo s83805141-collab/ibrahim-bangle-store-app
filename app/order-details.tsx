@@ -21,6 +21,8 @@ import {
 
 type EditableColour = {
   colour_name: string;
+  gaddi: string;
+  boxes_per_gaddi: string;
   qty_2: string;
   qty_22: string;
   qty_24: string;
@@ -40,6 +42,8 @@ const toEditable = (order: OrderWithItems): EditableItem[] =>
     product_name: item.product_name,
     colours: item.colours.map((colour) => ({
       colour_name: colour.colour_name,
+      gaddi: String(colour.gaddi || ''),
+      boxes_per_gaddi: String(colour.boxes_per_gaddi || ''),
       qty_2: String(colour.qty_2 || ''),
       qty_22: String(colour.qty_22 || ''),
       qty_24: String(colour.qty_24 || ''),
@@ -128,6 +132,8 @@ export default function OrderDetailsScreen() {
                 ...item.colours,
                 {
                   colour_name: '',
+                  gaddi: '',
+                  boxes_per_gaddi: '',
                   qty_2: '',
                   qty_22: '',
                   qty_24: '',
@@ -200,6 +206,8 @@ export default function OrderDetailsScreen() {
           product_name: item.product_name,
           colours: item.colours.map((colour) => ({
             colour_name: colour.colour_name,
+            gaddi: Number(colour.gaddi) || 0,
+            boxes_per_gaddi: Number(colour.boxes_per_gaddi) || 0,
             qty_2: Number(colour.qty_2) || 0,
             qty_22: Number(colour.qty_22) || 0,
             qty_24: Number(colour.qty_24) || 0,

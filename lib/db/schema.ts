@@ -423,6 +423,11 @@ CREATE TABLE IF NOT EXISTS order_item_colours (
 );
 `;
 
+export const MIGRATION_SQL_9 = `
+ALTER TABLE order_item_colours ADD COLUMN gaddi REAL NOT NULL DEFAULT 0;
+ALTER TABLE order_item_colours ADD COLUMN boxes_per_gaddi REAL NOT NULL DEFAULT 0;
+`;
+
 export const SEED_CATEGORIES = [
   'Toda',
   'Plain Toda',
