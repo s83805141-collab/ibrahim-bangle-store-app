@@ -26,6 +26,8 @@ type Product = {
 
 type ColourRow = {
   colour_name: string;
+  gaddi: string;
+  boxes_per_gaddi: string;
   qty_2: string;
   qty_22: string;
   qty_24: string;
@@ -35,6 +37,8 @@ type ColourRow = {
 
 const emptyColour = (): ColourRow => ({
   colour_name: '',
+  gaddi: '',
+  boxes_per_gaddi: '',
   qty_2: '',
   qty_22: '',
   qty_24: '',
@@ -170,6 +174,8 @@ export default function OrderScreen() {
         product_name: product.product_name,
         colours: product.colours.map((colour: any) => ({
           colour_name: colour.colour_name,
+          gaddi: Number(colour.gaddi) || 0,
+          boxes_per_gaddi: Number(colour.boxes_per_gaddi) || 0,
           qty_2: Number(colour.qty_2) || 0,
           qty_22: Number(colour.qty_22) || 0,
           qty_24: Number(colour.qty_24) || 0,
@@ -300,6 +306,44 @@ export default function OrderScreen() {
                     placeholder="Colour name"
                     style={styles.input}
                   />
+
+                  <View style={styles.detailsRow}>
+                    <View style={styles.detailBox}>
+                      <Text style={styles.detailLabel}>Gaddi</Text>
+                      <TextInput
+                        value={colour.gaddi}
+                        onChangeText={(value) =>
+                          updateColour(
+                            productIndex,
+                            colourIndex,
+                            'gaddi',
+                            value.replace(/[^0-9.]/g, '')
+                          )
+                        }
+                        keyboardType="numeric"
+                        placeholder="0"
+                        style={styles.detailInput}
+                      />
+                    </View>
+
+                    <View style={styles.detailBox}>
+                      <Text style={styles.detailLabel}>Boxes / Gaddi</Text>
+                      <TextInput
+                        value={colour.boxes_per_gaddi}
+                        onChangeText={(value) =>
+                          updateColour(
+                            productIndex,
+                            colourIndex,
+                            'boxes_per_gaddi',
+                            value.replace(/[^0-9.]/g, '')
+                          )
+                        }
+                        keyboardType="numeric"
+                        placeholder="0"
+                        style={styles.detailInput}
+                      />
+                    </View>
+                  </View>
 
                   <View style={styles.qtyRow}>
                     {(['qty_2', 'qty_22', 'qty_24', 'qty_26', 'qty_28'] as const).map(
@@ -518,6 +562,28 @@ const styles = StyleSheet.create({
   removeText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  detailBox: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  detailInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dddddd',
+    borderRadius: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    textAlign: 'center',
   },
   qtyRow: {
     flexDirection: 'row',
