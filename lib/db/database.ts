@@ -146,9 +146,10 @@ const BACKUP_KEY = 'ibrahim_bangle_store_db';
 const BACKUP_VERSION = 1;
 
 const AUTO_BACKUP_TIME_KEY = 'automatic_backup_last_run';
-const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000;
-
 const AUTO_BACKUP_ENABLED_KEY = 'automatic_backup_enabled';
+const AUTO_BACKUP_FOLDER_KEY = 'automatic_backup_folder_uri';
+const AUTO_BACKUP_FILE_KEY = 'automatic_backup_file_uri';
+const AUTO_BACKUP_FILE_NAME = 'Ibrahim_Bangle_Auto_Backup.json.gz';
 
 export async function isAutomaticBackupEnabled(): Promise<boolean> {
   try {
@@ -179,6 +180,64 @@ export async function setAutomaticBackupEnabled(
   );
 }
 
+export async function selectAutomaticBackupFolder(): Promise<boolean> {
+  try {
+    if (Platform.OS === 'web') {
+      return false;
+    }
+
+    const permissions =
+      await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+    if (!permissions.granted || !permissions.directoryUri) {
+      return false;
+    }
+
+    const db = await getDb();
+
+    await db.exec(
+      'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+      [AUTO_BACKUP_FOLDER_KEY, permissions.directoryUri]
+    );
+
+    // Clear the old file URI so it will be recreated in the newly selected folder.
+    await db.exec(
+      'DELETE FROM settings WHERE key = ?',
+      [AUTO_BACKUP_FILE_KEY]
+    );
+
+    console.log(
+      'Automatic backup folder selected:',
+      permissions.directoryUri
+    );
+
+    return true;
+  } catch (error) {
+    console.error('Could not select automatic backup folder:', error);
+    return false;
+  }
+}
+
+export async function getAutomaticBackupFolder(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return null;
+    }
+
+    const db = await getDb();
+
+    const result = await db.exec(
+      'SELECT value FROM settings WHERE key = ?',
+      [AUTO_BACKUP_FOLDER_KEY]
+    );
+
+    return result.rows._array?.[0]?.value || null;
+  } catch (error) {
+    console.error('Could not read automatic backup folder:', error);
+    return null;
+  }
+}
+
 export async function getLastAutomaticBackup(): Promise<number> {
   try {
     const db = await getDb();
@@ -197,6 +256,11 @@ export async function getLastAutomaticBackup(): Promise<number> {
 
 export async function runAutomaticBackup(): Promise<void> {
   try {
+    if (Platform.OS === 'web') {
+      console.log('Automatic Download backup is native-only.');
+      return;
+    }
+
     const enabled = await isAutomaticBackupEnabled();
 
     if (!enabled) {
@@ -206,39 +270,82 @@ export async function runAutomaticBackup(): Promise<void> {
 
     const db = await getDb();
 
-    const result = await db.exec(
+    // Read the folder URI previously selected by the user.
+    const folderResult = await db.exec(
       'SELECT value FROM settings WHERE key = ?',
-      [AUTO_BACKUP_TIME_KEY]
+      [AUTO_BACKUP_FOLDER_KEY]
     );
 
-    const lastBackup = Number(result.rows._array[0]?.value || 0);
-    const now = Date.now();
+    const folderUri = folderResult.rows._array?.[0]?.value;
 
-    if (lastBackup > 0 && now - lastBackup < AUTO_BACKUP_INTERVAL) {
+    // User must select a Download folder once.
+    if (!folderUri) {
+      console.log(
+        'Automatic backup folder is not configured. Open Backup & Restore and select Download folder.'
+      );
       return;
     }
 
-    // Create the same complete backup used by the existing Backup screen.
+    // Create the complete compressed backup.
     const backup = await exportBackup();
+    const compressed = gzipSync(strToU8(backup));
 
-    // Save the automatic backup as a real local file.
-    const documentDirectory = FileSystem.documentDirectory;
-
-    if (!documentDirectory) {
-      throw new Error('App document directory is unavailable');
+    // Convert compressed bytes to base64.
+    let binary = '';
+    for (let i = 0; i < compressed.length; i++) {
+      binary += String.fromCharCode(compressed[i]);
     }
 
-    const backupFilePath = documentDirectory + 'auto_backup.json';
+    const base64 = btoa(binary);
 
-    await FileSystem.writeAsStringAsync(
-      backupFilePath,
-      backup,
+    // Reuse the previously-created file URI so every backup overwrites
+    // the same Download-folder file.
+    const fileResult = await db.exec(
+      'SELECT value FROM settings WHERE key = ?',
+      [AUTO_BACKUP_FILE_KEY]
+    );
+
+    let fileUri = fileResult.rows._array?.[0]?.value;
+
+    // If the saved file URI is unavailable, find/create the backup file.
+    if (!fileUri) {
+      const files = await FileSystem.StorageAccessFramework.readDirectoryAsync(
+        folderUri
+      );
+
+      const existing = files.find((uri: string) =>
+        uri.endsWith('/' + AUTO_BACKUP_FILE_NAME) ||
+        decodeURIComponent(uri).endsWith('/' + AUTO_BACKUP_FILE_NAME)
+      );
+
+      if (existing) {
+        fileUri = existing;
+      } else {
+        fileUri =
+          await FileSystem.StorageAccessFramework.createFileAsync(
+            folderUri,
+            AUTO_BACKUP_FILE_NAME,
+            'application/gzip'
+          );
+      }
+
+      await db.exec(
+        'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+        [AUTO_BACKUP_FILE_KEY, fileUri]
+      );
+    }
+
+    // Overwrite the same file in the user's Download folder.
+    await FileSystem.StorageAccessFramework.writeAsStringAsync(
+      fileUri,
+      base64,
       {
-        encoding: FileSystem.EncodingType.UTF8,
+        encoding: FileSystem.EncodingType.Base64,
       }
     );
 
-    // Store only the timestamp in SQLite.
+    const now = Date.now();
+
     await db.exec(
       'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
       [AUTO_BACKUP_TIME_KEY, String(now)]
@@ -246,7 +353,7 @@ export async function runAutomaticBackup(): Promise<void> {
 
     console.log(
       'Automatic backup completed successfully:',
-      backupFilePath
+      fileUri
     );
   } catch (error) {
     console.error('Automatic backup failed:', error);

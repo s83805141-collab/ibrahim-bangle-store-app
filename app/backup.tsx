@@ -19,6 +19,8 @@ import {
   isAutomaticBackupEnabled,
   setAutomaticBackupEnabled,
   getLastAutomaticBackup,
+  selectAutomaticBackupFolder,
+  getAutomaticBackupFolder,
 } from '../lib/db/database';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -80,6 +82,27 @@ export default function BackupScreen() {
       );
     }
   }, []);
+  const handleSelectAutomaticBackupFolder = useCallback(async () => {
+    try {
+      const selected = await selectAutomaticBackupFolder();
+
+      if (selected) {
+        setStatus(
+          'Download folder selected. Automatic backups will be saved there.'
+        );
+        Alert.alert(
+          'Download Folder Selected',
+          'Automatic backups will now be saved in the selected Download folder.'
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error?.message || 'Could not select Download folder.'
+      );
+    }
+  }, []);
+
 
   const handleExportAndShare = useCallback(async () => {
     setBusy('export');
@@ -219,6 +242,15 @@ export default function BackupScreen() {
               </Text>
             </View>
           )}
+
+            <Button
+              title="Select Download Folder"
+              intent="primary"
+              onPress={handleSelectAutomaticBackupFolder}
+              disabled={loadingAutomaticBackup}
+              fullWidth
+              style={{ marginTop: MD3Spacing.sm }}
+            />
         </Animated.View>
 
         {/* Restore Card */}
