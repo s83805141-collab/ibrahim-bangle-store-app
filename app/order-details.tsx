@@ -373,43 +373,91 @@ export default function OrderDetailsScreen() {
                   </Text>
                 )}
 
-                <View style={styles.qtyRow}>
-                  {(
-                    [
-                      ['2', 'qty_2'],
-                      ['22', 'qty_22'],
-                      ['24', 'qty_24'],
-                      ['26', 'qty_26'],
-                      ['28', 'qty_28'],
-                    ] as const
-                  ).map(([label, field]) => (
-                    <View style={styles.qtyBox} key={field}>
-                      <Text style={styles.qtyLabel}>{label}</Text>
+                <View style={styles.detailsRow}>
+              <View style={styles.detailBox}>
+                <Text style={styles.detailLabel}>Gaddi</Text>
 
-                      {editing ? (
-                        <TextInput
-                          value={colour[field]}
-                          onChangeText={(value) =>
-                            updateColour(
-                              itemIndex,
-                              colourIndex,
-                              field,
-                              value.replace(/[^0-9.]/g, '')
-                            )
-                          }
-                          keyboardType="numeric"
-                          style={styles.qtyInput}
-                        />
-                      ) : (
-                        <Text style={styles.qtyValue}>
-                          {colour[field] || '0'}
-                        </Text>
-                      )}
-                    </View>
-                  ))}
+                {editing ? (
+                  <TextInput
+                    value={colour.gaddi}
+                    onChangeText={(value) =>
+                      updateColour(
+                        itemIndex,
+                        colourIndex,
+                        'gaddi',
+                        value.replace(/[^0-9.]/g, '')
+                      )
+                    }
+                    keyboardType="numeric"
+                    style={styles.detailInput}
+                  />
+                ) : (
+                  <Text style={styles.detailValue}>
+                    {colour.gaddi || '0'}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.detailBox}>
+                <Text style={styles.detailLabel}>Boxes / Gaddi</Text>
+
+                {editing ? (
+                  <TextInput
+                    value={colour.boxes_per_gaddi}
+                    onChangeText={(value) =>
+                      updateColour(
+                        itemIndex,
+                        colourIndex,
+                        'boxes_per_gaddi',
+                        value.replace(/[^0-9.]/g, '')
+                      )
+                    }
+                    keyboardType="numeric"
+                    style={styles.detailInput}
+                  />
+                ) : (
+                  <Text style={styles.detailValue}>
+                    {colour.boxes_per_gaddi || '0'}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.qtyRow}>
+              {([
+                ['2', 'qty_2'],
+                ['22', 'qty_22'],
+                ['24', 'qty_24'],
+                ['26', 'qty_26'],
+                ['28', 'qty_28'],
+              ] as const).map(([label, field]) => (
+                <View style={styles.qtyBox} key={field}>
+                  <Text style={styles.qtyLabel}>{label}</Text>
+
+                  {editing ? (
+                    <TextInput
+                      value={colour[field]}
+                      onChangeText={(value) =>
+                        updateColour(
+                          itemIndex,
+                          colourIndex,
+                          field,
+                          value.replace(/[^0-9]/g, '')
+                        )
+                      }
+                      keyboardType="numeric"
+                      style={styles.qtyInput}
+                    />
+                  ) : (
+                    <Text style={styles.qtyValue}>
+                      {colour[field] || '0'}
+                    </Text>
+                  )}
                 </View>
+              ))}
+            </View>
 
-                {editing && item.colours.length > 1 ? (
+            {editing && item.colours.length > 1 ? (
                   <Pressable
                     style={styles.removeColour}
                     onPress={() =>
@@ -514,6 +562,51 @@ const styles = StyleSheet.create({
     padding: 15,
     paddingBottom: 40,
   },
+
+  detailsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+
+  detailBox: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#eeeeee',
+  },
+
+  detailLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#777777',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+
+  detailInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dddddd',
+    borderRadius: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  detailValue: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#eeeeee',
+    borderRadius: 7,
+    paddingVertical: 9,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
   infoCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,

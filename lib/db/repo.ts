@@ -2864,75 +2864,77 @@ export async function getOrders(): Promise<OrderHeader[]> {
 }
 
 export async function getOrderById(
-  id: number
+    id: number
 ): Promise<OrderWithItems | null> {
-  const db = await getDb();
+    const db = await getDb();
 
-  const headerResult = await db.exec(
-    `SELECT
-      id,
-      order_number,
-      party_name,
-      order_date,
-      note,
-      created_at,
-      updated_at
-     FROM order_headers
-     WHERE id = ?
-     LIMIT 1`,
-    [id]
-  );
-
-  const header = (headerResult.rows._array || [])[0] as
-    | OrderHeader
-    | undefined;
-
-  if (!header) {
-    return null;
-  }
-
-  const itemsResult = await db.exec(
-    `SELECT
-      id,
-      order_id,
-      product_id,
-      product_name
-     FROM order_items
-     WHERE order_id = ?
-     ORDER BY id`,
-    [id]
-  );
-
-  const itemsRows = (itemsResult.rows._array || []) as OrderItem[];
-  const items: OrderItem[] = [];
-
-  for (const item of itemsRows) {
-    const coloursResult = await db.exec(
-      `SELECT
-        id,
-        order_item_id,
-        colour_name,
-        qty_2,
-        qty_22,
-        qty_24,
-        qty_26,
-        qty_28
-       FROM order_item_colours
-       WHERE order_item_id = ?
-       ORDER BY id`,
-      [item.id]
+    const headerResult = await db.exec(
+        'SELECT \
+            id, \
+            order_number, \
+            party_name, \
+            order_date, \
+            note, \
+            created_at, \
+            updated_at \
+         FROM order_headers \
+         WHERE id = ? \
+         LIMIT 1;',
+        [id]
     );
 
-    items.push({
-      ...item,
-      colours: (coloursResult.rows._array || []) as OrderItemColour[],
-    });
-  }
+    const header = (headerResult.rows?._array || [])[0] as
+        | OrderHeader
+        | undefined;
 
-  return {
-    header,
-    items,
-  };
+    if (!header) {
+        return null;
+    }
+
+    const itemsResult = await db.exec(
+        'SELECT \
+            id, \
+            order_id, \
+            product_id, \
+            product_name \
+         FROM order_items \
+         WHERE order_id = ? \
+         ORDER BY id;',
+        [id]
+    );
+
+    const itemsRows = (itemsResult.rows?._array || []) as OrderItem[];
+    const items: OrderItem[] = [];
+
+    for (const item of itemsRows) {
+        const coloursResult = await db.exec(
+            'SELECT \
+                id, \
+                order_item_id, \
+                colour_name, \
+                gaddi, \
+                boxes_per_gaddi, \
+                qty_2, \
+                qty_22, \
+                qty_24, \
+                qty_26, \
+                qty_28 \
+             FROM order_item_colours \
+             WHERE order_item_id = ? \
+             ORDER BY id;',
+            [item.id]
+        );
+
+        items.push({
+            ...item,
+            colours: (coloursResult.rows?._array || []) as OrderItemColour[],
+        });
+    }
+
+    return {
+        header,
+        items,
+    };
 }
 
 export async function updateOrder(
