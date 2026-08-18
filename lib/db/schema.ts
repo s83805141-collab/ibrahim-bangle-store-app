@@ -390,6 +390,39 @@ CREATE TABLE IF NOT EXISTS quick_bill_items (
 );
 `;
 
+export const MIGRATION_SQL_8 = `
+CREATE TABLE IF NOT EXISTS order_headers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_number TEXT NOT NULL UNIQUE,
+    party_name TEXT NOT NULL,
+    order_date INTEGER NOT NULL,
+    note TEXT DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    product_id INTEGER,
+    product_name TEXT NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES order_headers(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE IF NOT EXISTS order_item_colours (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_item_id INTEGER NOT NULL,
+    colour_name TEXT NOT NULL,
+    qty_2 REAL NOT NULL DEFAULT 0,
+    qty_22 REAL NOT NULL DEFAULT 0,
+    qty_24 REAL NOT NULL DEFAULT 0,
+    qty_26 REAL NOT NULL DEFAULT 0,
+    qty_28 REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
+);
+`;
+
 export const SEED_CATEGORIES = [
   'Toda',
   'Plain Toda',
