@@ -223,6 +223,8 @@ export default function OrderScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets={true}
       >
         <Text style={styles.label}>Party Name</Text>
 
