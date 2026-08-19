@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ShoppingCart, X, Search, AlertTriangle, FileText, ChevronDown, ChevronUp, Camera, MessageCircle, Share2, Printer, CheckCircle2, MessageSquare } from 'lucide-react-native';
@@ -264,7 +265,14 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
             <Text style={styles.modalTitle}>New Sale</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }} keyboardShouldPersistTaps="handled">
+          <KeyboardAwareScrollView
+            style={styles.modalBody}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid={true}
+            extraScrollHeight={80}
+            extraHeight={120}
+          >
             <View style={styles.rowInputs}>
               <Input label="Invoice #" value={invoiceNumber} onChangeText={setInvoiceNumber} placeholder="Auto" style={{ flex: 1, marginRight: MD3Spacing.sm }} />
               <Input label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={{ flex: 1 }} />
@@ -467,7 +475,7 @@ function SaleFormModal({ visible, onClose, onSaved }: { visible: boolean; onClos
 
             <Input label="Note" value={note} onChangeText={setNote} placeholder="Optional" multiline />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </ScrollView>
+          </KeyboardAwareScrollView>
           <View style={styles.modalStickyFooter}>
             <Button title="Cancel" intent="cancel" variant="outlined" onPress={onClose} style={{ flex: 1, marginRight: MD3Spacing.sm }} />
             <Button title="Save Sale" intent="save" onPress={handleSave} loading={saving} style={{ flex: 1 }} />

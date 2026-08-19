@@ -1,5 +1,6 @@
 import { SirenButtons } from "../components/SirenButtons";
 import { useState, useCallback, useEffect } from 'react';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Truck, Pencil, Trash2, X, Phone, MapPin, ChevronRight, Camera } from 'lucide-react-native';
@@ -149,7 +150,14 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
             <Text style={styles.modalTitle}>{supplier ? 'Edit Supplier' : 'Add Supplier'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 180 }}>
+          <KeyboardAwareScrollView
+                style={styles.modalBody}
+                contentContainerStyle={{ paddingBottom: 180 }}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid={true}
+                extraScrollHeight={80}
+                extraHeight={120}
+              >
             <View style={styles.photoWrap}>
               <TouchableOpacity onPress={pickPhoto} style={styles.photoBtn}>
                 {photo ? (
@@ -187,7 +195,7 @@ function SupplierFormModal({ visible, supplier, onClose, onSaved }: { visible: b
             </View>
             <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Additional notes" multiline />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </ScrollView>
+          </KeyboardAwareScrollView>
           <SirenButtons onCancel={onClose} onSave={handleSave} cancelText="Cancel" saveText={supplier ? "Update" : "Save"} />
         </View>
       </KeyboardAvoidingView>

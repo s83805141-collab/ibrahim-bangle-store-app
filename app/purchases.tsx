@@ -1,5 +1,6 @@
 import { SirenButtons } from "../components/SirenButtons";
 import { useState, useCallback, useEffect } from 'react';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, ScrollView, Alert, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Plus, Trash2, ClipboardList, X, ChevronDown, ChevronUp, Package, Search, Camera, ImageIcon } from 'lucide-react-native';
@@ -314,7 +315,14 @@ function PurchaseFormModal({
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}><X size={22} color={MD3Colors.onSurface} strokeWidth={2.4} /></TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+          <KeyboardAwareScrollView
+                style={styles.modalBody}
+                contentContainerStyle={{ paddingBottom: 80 }}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid={true}
+                extraScrollHeight={80}
+                extraHeight={120}
+              >
             {suppliers.length === 0 ? (
               <Text style={styles.hintText}>Please add a supplier first.</Text>
             ) : (
@@ -513,7 +521,7 @@ function PurchaseFormModal({
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </>
             )}
-          </ScrollView>
+            </KeyboardAwareScrollView>
           <View style={{ paddingBottom: 34 }}><SirenButtons
                 onCancel={onClose}
                 onSave={handleSave}

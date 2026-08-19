@@ -5,12 +5,12 @@ import {
   Modal,
   Pressable,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter } from 'expo-router';
 import {
   getAllProducts,
@@ -220,9 +220,12 @@ export default function OrderScreen() {
         <View style={{ width: 35 }} />
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        extraScrollHeight={80}
+        extraHeight={120}
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets={true}
       >
@@ -400,7 +403,7 @@ export default function OrderScreen() {
             {saving ? 'Saving...' : 'Save Order'}
           </Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Modal
         visible={productModal}
