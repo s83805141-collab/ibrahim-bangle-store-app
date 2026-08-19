@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { pickImage as pickImagePersistent, takePhoto as takePhotoPersistent } from '@/lib/imagePicker';
 import {
     addDailyCustomerEntry,
@@ -15,8 +16,8 @@ import {
   Animated, View,
   Text,
   TextInput,
+    ScrollView,
   StyleSheet,
-  ScrollView,
   Pressable,
   Alert,
   Linking,
@@ -416,10 +417,13 @@ Available stock: ${availableStock}`
 };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
+            enableOnAndroid={true}
+            extraScrollHeight={80}
+            extraHeight={120}
     >
       <Text style={styles.title}>Daily Customer</Text>
 
@@ -966,7 +970,7 @@ Available stock: ${availableStock}`
         </Pressable>
         </Animated.View>
       </View>
-    </ScrollView>
+      </KeyboardAwareScrollView>
   );
 }
 
